@@ -1,0 +1,599 @@
+---
+output:
+  html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+<style type="text/css">
+div.main-container {
+  max-width: 2000px;
+  margin-left: 0;
+  margin-right: auto;
+}
+</style>
+
+<style>
+.tocify {
+color: black;
+}
+<!-- } -->
+<!-- .tocify .tocify-header { -->
+<!--     position: fixed; -->
+<!--     <!-- top: 50px; --> -->
+<!--     left: 50px; -->
+<!--     width: 350px; -->
+<!--     <!-- border: solid 3px black; --> -->
+<!--     <!-- height: 200px; --> -->
+<!--  border: none; -->
+<!-- } -->
+.tocify .tocify-header .active {
+color: white;
+background: #d80b8c;
+font-weight: bold;
+}
+<!-- .tocify .tocify-item { -->
+<!-- background: white; -->
+<!-- color: black; -->
+<!--  border: none; -->
+<!-- } -->
+</style>
+
+
+<style>
+  .nav-pills>li>a:hover, .nav-pills>li>a:focus, .nav-pills>li.active>a,     .nav-pills>li.active>a:hover, .nav-pills>li.active>a:focus{
+     background-color: #212070;
+     }
+</style>
+
+<style>
+.container { width: 1800px; }
+h2 {
+  background-color: #dddedd;
+  color: black;
+  text-indent: 20px;
+  <!-- font-weight: bold; -->
+}
+h3 {
+  background-color: #f2f2f2;
+  color: black;
+  text-indent: 20px;
+  <!-- font-weight: bold; -->
+}
+h4 {
+  <!-- background-color: #dddedd; -->
+  <!-- color: black; -->
+  text-indent: 50px;
+  <!-- font-weight: bold; -->
+}
+</style>
+
+<style>
+.blackbox {
+  padding: 1em;
+  background: white;
+  color: black;
+  border: 2px solid #7f7f7f;
+  width: 100%;
+  position: center;
+  align: center;
+  margin: 0px auto;
+}
+.center {
+  text-align: left;
+  margin: 0px auto;
+}
+</style>
+
+
+<!-- ```{css toc-content, echo = FALSE} -->
+<!-- #TOC { -->
+<!--   right: 270px; -->
+<!--   margin: 20px 0px 25px 0px; -->
+<!-- } -->
+
+<!-- .main-container { -->
+<!--     margin-left: 200px; -->
+<!-- } -->
+<!-- ``` -->
+
+
+```{r Load Packages, echo = FALSE, warning = FALSE, message = FALSE}
+# # Load packages -----------------------------------------------------------------------------------
+suppressMessages({
+  memory.limit(size = 8000000)
+  library(readxl)
+  library(writexl)
+  library(plyr)
+  library(dplyr)
+  library(data.table)
+  library(zoo)
+  library(shiny)
+  library(shinydashboard)
+  library(shinydashboardPlus)
+  library(shinyWidgets)
+  library(htmlwidgets)
+  library(lubridate)
+  library(tcltk)
+  library(tidyverse)
+  library(plotly)
+  library(knitr)
+  library(kableExtra)
+  library(leaflet)
+  library(grid)
+  library(gridExtra)
+  library(eeptools)
+  library(ggQC)
+  library(zipcodeR)
+  library(utils)
+  library(scales)
+  library(chron)
+  library(bupaR)
+  library(shiny)
+  library(DT)
+  library(DiagrammeR)
+  library(shinyalert)
+  library(edeaR)
+  library(processmapR)
+  library(processmonitR)
+  library(processanimateR)
+  library(tidyr)
+  library(lubridate)
+  library(RColorBrewer)
+  library(DiagrammeR)
+  library(ggplot2)
+  library(leaflet)
+  library(readr)
+  library(highcharter)
+  library(ggforce) # for 'geom_arc_bar'
+  library(packcircles) # for packed circle graph
+  library(viridis)
+  library(ggiraph)
+  library(treemapify)
+  library(treemap)
+  library(broom)
+  library(extrafont)
+  library(tis) # for US holidays
+  library(vroom)
+  library(sjmisc)
+  library(tools)
+  library(here)
+  library(shinyBS)
+  library(shinyscreenshot)
+  library(fasttime)
+  library(shinycssloaders)
+  library(feather)
+  # library(zipcodeR)
+  library(formattable)
+  library(shinyjs)
+  library(janitor)
+  library(patchwork)
+  library(flexdashboard)
+  # library(tidyverse)
+  # library(viridis)
+  # library(hrbrthemes)
+  # library(plotly)
+  # install.packages("bsts")
+  library(bsts)
+  library(reactable)
+  # install.packages("reactablefmtr")
+  library(reactablefmtr)
+  library(svDialogs)
+  # library(openxlsx)
+  library(flextable)
+  library(officedown)
+  library(officer)
+  library(magrittr)
+  library(webshot) 
+  library(png)
+  library(ggh4x)
+  library(RODBC)
+  library(DBI)
+  library(odbc)
+  library(dbplyr)
+  library(pool)
+  library(emojifont)
+})
+
+```
+
+
+```{r Graph asthetics, echo = FALSE, warning = FALSE, message = FALSE}
+### Color Functions for Graphs ============================================================
+# Mount Sinai corporate colors "USE THIS TO ADD COLORS"
+MountSinai_colors <- c(
+  `dark purple`  = "#212070",
+  `dark pink`    = "#d80b8c",
+  `dark blue`    = "#00aeef",
+  `dark grey`    = "#7f7f7f",
+  `yellow`       = "#ffc000",
+  `purple`       = "#7030a0",
+  `med purple`   = "#5753d0",
+  `med pink`     = "#f75dbe",
+  `med blue`     = "#5cd3ff",
+  `med grey`     = "#a5a7a5",
+  `light purple` = "#c7c6ef",
+  `light pink`   = "#fcc9e9",
+  `light blue`   = "#c9f0ff",
+  `light grey`   = "#dddedd"
+  )
+# Function to extract Mount Sinai colors as hex codes
+# Use Character names of MountSinai_colors
+MountSinai_cols <- function(...) {
+  cols <- c(...)
+  
+  if (is.null(cols))
+    return (MountSinai_colors)
+  
+  MountSinai_colors[cols]
+}
+# Color Function that can be used to call all colors is "MountSinai_cols()"
+# Use in ggplot 
+  #MountSinai_cols()       # will provide all colors and their hex codes in a table 
+  #MountSinai_cols("pink") # will provide color name and the hex code for the pink color
+# Create palettes 
+MountSinai_palettes <- list(
+  `all`   = MountSinai_cols("dark purple","dark pink","dark blue","dark grey",
+                            "med purple","med pink","med blue","med grey", 
+                            "light purple","light pink","light blue","light grey"),
+  
+  `main`  = MountSinai_cols("dark purple","dark pink","dark blue","dark grey"),
+  
+  `purple`  = MountSinai_cols("dark purple","med purple","light purple"),
+  
+  `pink`  = MountSinai_cols("dark pink","med pink","light pink"),
+  
+  `blue`  = MountSinai_cols("dark blue", "med blue", "light blue"),
+  
+  `grey`  = MountSinai_cols("dark grey", "med grey", "light grey"),
+  
+  `purpleGrey` = MountSinai_cols("dark purple", "dark grey"),
+  
+  `pinkBlue` = MountSinai_cols("dark pink", "dark blue")
+  
+)
+# MountSinai_palettes
+# Return function to interpolate a Mount Sinai color palette
+# default value is the main palette, reverse = True will change the order
+MountSinai_pal <- function(palette = "all", reverse = FALSE, ...) {
+  pal <- MountSinai_palettes[[palette]]
+  
+  if (reverse) pal <- rev(pal)
+  
+  colorRampPalette(pal, ...)
+}
+# Scale Function for ggplot can be used instead of scale_color_manual
+scale_color_MountSinai <- function(palette = "all", discrete = TRUE, reverse = FALSE, ...) {
+  pal <- MountSinai_pal(palette = palette, reverse = reverse)
+  
+  if (discrete) {
+    discrete_scale("colour", paste0("MountSinai_", palette), palette = pal, ...)
+  } else {
+    scale_color_gradientn(colours = pal(256), ...)
+  }
+}
+# Scale Fill for ggplot insetead of scale_fill_manual 
+scale_fill_MountSinai <- function(palette = "all", discrete = TRUE, reverse = FALSE, ...) {
+  pal <- MountSinai_pal(palette = palette, reverse = reverse)
+  if (discrete) {
+    discrete_scale("fill", paste0("MountSinai_", palette), palette = pal, ...)
+  } else {
+    scale_fill_gradientn(colours = pal(256), ...)
+  }
+}
+# Use in ggplot 
+  # scale_color_MountSinai("main")
+```
+
+
+```{r Global Variables, echo = FALSE, warning = FALSE, message = FALSE}
+
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+```
+
+
+```{r Connect to Tables, echo = FALSE, warning = FALSE, message = FALSE}
+
+# Connection to Oracle DB ------------------------------------------------------
+conn1 <- dbPool(drv = odbc(), dsn = "OAO Cloud DB SoYoun", timeout = 30)
+conn2 <- dbConnect(odbc(), 
+                  "Clarity_prod", 
+                  uid = "kweons01" , 
+                  pwd = "kweons01123$")
+
+
+# Import Slot Availability Data ------------------------------------------------
+slot_raw_tbl <- tbl(conn2, "Y_DM_BOOKED_FILLED_RATE")
+access_raw_tbl <- tbl(conn2, "MV_DM_PATIENT_ACCESS")
+availability_raw_tbl <- tbl(conn2, "V_AVAILABILITY")
+block_raw_tbl <- tbl(conn2, "AVAIL_BLOCK")
+block_name_tbl <- tbl(conn2, "ZC_APPT_BLOCK")
+orders_raw_tbl <- tbl(conn2, "ORDER_PROC")
+coverage_tbl <- tbl(conn2, "V_PAT_ENC_COVERAGE")
+
+```
+
+
+```{r Report Variables, echo = FALSE, warning = FALSE, message = FALSE}
+
+report_run_date <- Sys.Date()
+
+```
+
+
+```{r Late Releasing Slots, echo = FALSE, warning = FALSE, message = FALSE}
+
+# Slot Block Data --------------------------------------------------------------
+late_block_raw <- block_raw_tbl %>%
+  mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
+         Slot.Year = year(SLOT_BEGIN_TIME),
+         Slot.Month = month(SLOT_BEGIN_TIME)) %>%
+  filter(Slot.Year == 2023) %>%
+  filter(Slot.Month >= 04) %>%
+  collect() %>%
+  mutate(Slot.YearMonth = format(as.Date(Slot.DateYear), "%Y-%m"))
+
+late_block_raw$block_name <- block_name_raw$NAME[match(late_block_raw$BLOCK_C, block_name_raw$APPT_BLOCK_C)]
+
+
+# Department and Provider Mapping ----------------------------------------------
+dept_mapping <- access_raw_tbl %>%
+  group_by(SITE, DEPARTMENT_ID, DEPARTMENT_NAME) %>%
+  summarise(total = n()) %>%
+  collect() %>%
+  dplyr::select(-total)
+
+prov_mapping <- access_raw_tbl %>%
+  group_by(PROV_ID, PROV_NAME_WID) %>%
+  summarise(total = n()) %>%
+  collect() %>%
+  dplyr::select(-total)
+
+prov_mapping$PROV_NAME <- trimws(gsub("\\[.*?\\]", "", prov_mapping$PROV_NAME_WID))
+
+
+# Map Department and Provider Name ---------------------------------------------
+late_block_raw$Campus <- dept_mapping$SITE[match(late_block_raw$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+late_block_raw$Department <- dept_mapping$DEPARTMENT_NAME[match(late_block_raw$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+late_block_raw$Provider <- prov_mapping$PROV_NAME[match(late_block_raw$PROV_ID, prov_mapping$PROV_ID)]
+
+
+# Cateogrize Block Type: Late Reasing vs. Other 
+late_block_raw <- late_block_raw %>%
+  group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME) %>%
+  mutate(late_release_allowed = ifelse(any(BLOCK_C %in% c("578","579","580","581")) == FALSE, "Other", ""),
+         late_release_allowed_7 = ifelse(any(BLOCK_C == "578") == TRUE, "NEW PATIENT 7-DAY", ""),
+         late_release_allowed_14 = ifelse(any(BLOCK_C == "579") == TRUE, "NEW PATIENT 14-DAY", ""),
+         late_release_allowed_21 = ifelse(any(BLOCK_C == "580") == TRUE, "NEW PATIENT 21-DAY", ""),
+         late_release_allowed_28 = ifelse(any(BLOCK_C == "581") == TRUE, "NEW PATIENT 28-DAY", ""))
+
+late_block_summary <- late_block_raw %>%
+  group_by(Campus, Department, Provider, SLOT_BEGIN_TIME, Slot.DateYear, Slot.YearMonth,
+           late_release_allowed, late_release_allowed_7, late_release_allowed_14, late_release_allowed_21, late_release_allowed_28) %>%
+  summarise(total = n())
+  
+late_block_summary[is.na(late_block_summary)] <- ""
+
+late_block_summary <- late_block_summary %>%
+    mutate(slot_category = trim(paste(late_release_allowed, late_release_allowed_7, late_release_allowed_14, late_release_allowed_21, late_release_allowed_28)))
+  
+
+late_block_usage <- late_block_summary %>%
+  group_by(Campus, Department, Provider, Slot.YearMonth, Slot.DateYear, slot_category) %>%
+  summarise(category_slots = n()) %>%
+  pivot_wider(names_from = slot_category,
+              values_from = category_slots,
+              values_fill = 0) %>%
+  ungroup() %>%
+  add_column(total_slots= "", .before = "Other") %>%
+  add_column(perc_late = "", .after = "total_slots")
+
+late_block_usage <- late_block_usage %>%
+  mutate(total_slots = rowSums(across(8:length(late_block_usage)), na.rm = T)) %>%
+  mutate(perc_late = round((total_slots - Other)/total_slots,2)) %>%
+  dplyr::select(1:8, 'NEW PATIENT 7-DAY', 'NEW PATIENT 14-DAY', 'NEW PATIENT 21-DAY', 'NEW PATIENT 28-DAY', 'NEW PATIENT 7-DAY NEW PATIENT 14-DAY')
+
+late_block_usage <- late_block_usage %>%
+  mutate(Slot.DateYear = as.character(Slot.DateYear))
+  
+```
+
+
+
+```{r Sinai Logo, echo=FALSE, out.width = '15%'}
+knitr::include_graphics("Mount_Sinai_Logo_H.png")
+```
+
+
+# Late-Releasing Blocks for New Patient Visits 
+*Report run date: `r report_run_date`*<br/>
+______________________________________________________________________________________________________________________________
+<br/>
+<br/>
+
+
+```{r Late Releasing Block Output (Slot Count), echo = FALSE, warning = FALSE, message = FALSE}
+
+# Table Output -----------------------------------------------------------------
+htmltools::browsable(
+  tagList(
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download Table"),
+      onclick = "Reactable.downloadDataCSV('late-releasing-count', 'Late-Releasing Blocks')"
+    ),
+
+# htmltools::browsable(
+#   tagList(
+#     div(tags$label("Group by", `for` = "cars-grouping-select")),
+#     tags$select(
+#       id = "cars-grouping-select",
+#       onchange = "Reactable.setGroupBy('cars-grouping-table', this.value ? [this.value] : [])",
+#       tags$option("None", value = c("Campus","Campus.Specialty.Group")),
+#       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")),
+#       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#       lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#     ),
+# 
+#     tags$hr("aria-hidden" = "true"),
+
+reactable(
+  late_block_usage,
+  elementId = "late-releasing-count",
+  # elementId = "cars-grouping-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left",
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  rowStyle = function(index) {
+            if (index %in% c(10)) {
+              list(`border-top` = "2px solid rgb(184,184,184)",
+                   fontWeight = "Bold")
+            }
+          },
+
+  groupBy = c("Campus", "Department", "Provider", "Slot.YearMonth"),
+
+  # columnGroups = list(
+  #   # colGroup(name = paste0(format(as.Date(start_date), "%b"),"-",format(as.Date(end_date), "%b %Y"), " Visit Volume"), 
+  #   #          columns = c("Total", "new_perc"),
+  #   #          headerStyle = list(color = "#212070", fontSize = "16px")),
+  #   # colGroup(name = paste0(format(as.Date(start_date), "%b"),"-",format(as.Date(end_date), "%b %Y"), " No Show Rate"), 
+  #   #          columns = c("noShow_rate", "noShow_rate_Established", "noShow_rate_New"),
+  #   #          headerStyle = list(color = "#d80b8c", fontSize = "16px"))
+  #   colGroup(name = "", 
+  #            columns = c("Campus","Campus.Specialty.Group"), sticky = "left", 
+  #            headerStyle = list(fontSize = "16px")),
+  #   colGroup(name = paste0(current_year, " YTD Visit Volume"), 
+  #            columns = c("Arrived","arrived_perc","new_perc"),
+  #            headerStyle = list(color = "#212070", fontSize = "16px")),
+  #   colGroup(name = "No Show Plus Rate - All", 
+  #            columns = c("noShow_rate", "noShow_rate_sameDay", "noShow_rate_belowFourteen", "noShow_rate_belowThirty", "noShow_rate_overThirty"),
+  #            headerStyle = list(color = "#7f7f7f", fontSize = "16px")),
+  #   colGroup(name = "No Show Plus Rate - Established", 
+  #            columns = c("noShow_rate_Established", "noShow_rate_sameDay_Established", "noShow_rate_belowFourteen_Established", "noShow_rate_belowThirty_Established", "noShow_rate_overThirty_Established"),
+  #            headerStyle = list(color = "#d80b8c", fontSize = "16px")),
+  #   colGroup(name = "No Show Plus Rate - New", 
+  #            columns = c("noShow_rate_New","noShow_rate_sameDay_New", "noShow_rate_belowFourteen_New","noShow_rate_belowThirty_New", "noShow_rate_overThirty_New"),
+  #            headerStyle = list(color = "#00aeef", fontSize = "16px"))
+  #   ),
+
+  columns = list(
+
+    Campus = colDef(
+      name = "Site",
+      minWidth = 180),
+
+    Department = colDef(
+      minWidth = 200),
+    
+    Provider = colDef(
+      minWidth = 150),
+    
+    Slot.YearMonth = colDef(
+      name = "Year-Month",
+      minWidth = 100),
+    
+    Slot.DateYear = colDef(
+      name = "Date",
+      minWidth = 100),
+    
+    total_slots = colDef(
+      name = "Total Time Slots",
+      maxWidth = 120,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+
+    perc_late = colDef(
+      name = "% Late-Releasing Blocks",
+      maxWidth = 120,
+     headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = JS("function(values, rows) {
+        let totaltotal_slots = 0
+        let totalOther = 0
+        rows.forEach(function(row) {
+          totaltotal_slots += row['total_slots']
+          totalOther += row['Other']
+        })
+        return (totaltotal_slots - totalOther) / totaltotal_slots
+      }"),
+      format = colFormat(percent = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+
+    Other = colDef(
+      name = "Non-Late-Reasing",
+      maxWidth = 120,
+      headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    `NEW PATIENT 7-DAY` = colDef(
+      maxWidth = 120,
+      headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    `NEW PATIENT 14-DAY` = colDef(
+      maxWidth = 120,
+      headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    `NEW PATIENT 21-DAY` = colDef(
+      maxWidth = 120,
+      headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    `NEW PATIENT 28-DAY` = colDef(
+      maxWidth = 120,
+      headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+   
+    `NEW PATIENT 7-DAY NEW PATIENT 14-DAY` = colDef(
+      maxWidth = 120,
+      headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    )
+    
+  ) # Close Columns
+
+  ) # Close Reactable
+
+ )
+)
+```
+
