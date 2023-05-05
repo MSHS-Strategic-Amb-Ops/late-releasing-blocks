@@ -371,31 +371,31 @@ late_block_raw$Provider <- prov_mapping$PROV_NAME[match(late_block_raw$PROV_ID, 
 
 ```{r Block Usage Audit, echo = FALSE, warning = FALSE, message = FALSE}
 
-# Block Type Usage Audit Data =================================================
-## Count of Block Type Usage --------------------------------------------------
-block_usage <- late_block_raw %>%
-  group_by(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, BLOCK_C, block_name) %>%
-  summarise(total = n())
-
-## Count of Block Combination Usage --------------------------------------------
-block_combination_usage <- late_block_raw %>%
-  arrange(Campus, DEPARTMENT_ID, Department, SLOT_BEGIN_TIME, block_name) %>%
-  group_by(Campus, DEPARTMENT_ID, Department, SLOT_BEGIN_TIME) %>%
-  summarise(block_combination = paste0(unique(block_name[block_name!='']), collapse = ', ')) %>%
-  group_by(Campus, DEPARTMENT_ID, Department, block_combination) %>%
-  summarise(total = n())
-
-## Unique Block Types ----------------------------------------------------------
-block_type <- late_block_raw %>%
-  group_by(BLOCK_C, block_name) %>%
-  summarise(total = n())
-
-
-require(openxlsx)
-data_list <- list("Unique Blocks" = block_type,
-                  "Block Usage" = block_usage,
-                  "Block Combination Usage" = block_combination_usage)
-write.xlsx(data_list, "Block Types and Usage_5.5.2023.xlsx")
+# # Block Type Usage Audit Data =================================================
+# ## Count of Block Type Usage --------------------------------------------------
+# block_usage <- late_block_raw %>%
+#   group_by(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, BLOCK_C, block_name) %>%
+#   summarise(total = n())
+# 
+# ## Count of Block Combination Usage --------------------------------------------
+# block_combination_usage <- late_block_raw %>%
+#   arrange(Campus, DEPARTMENT_ID, Department, SLOT_BEGIN_TIME, block_name) %>%
+#   group_by(Campus, DEPARTMENT_ID, Department, SLOT_BEGIN_TIME) %>%
+#   summarise(block_combination = paste0(unique(block_name[block_name!='']), collapse = ', ')) %>%
+#   group_by(Campus, DEPARTMENT_ID, Department, block_combination) %>%
+#   summarise(total = n())
+# 
+# ## Unique Block Types ----------------------------------------------------------
+# block_type <- late_block_raw %>%
+#   group_by(BLOCK_C, block_name) %>%
+#   summarise(total = n())
+# 
+# 
+# require(openxlsx)
+# data_list <- list("Unique Blocks" = block_type,
+#                   "Block Usage" = block_usage,
+#                   "Block Combination Usage" = block_combination_usage)
+# write.xlsx(data_list, "Block Types and Usage_5.5.2023.xlsx")
 
 ```
 
