@@ -346,6 +346,66 @@ block_name_raw <- block_name_tbl %>%
 ```
 
 
+```{r New Patient Blocks, echo = FALSE, warning = FALSE, message = FALSE}
+
+
+new_blocks <- c(
+  "GMA New Pt",
+  "Endo New Patient",
+  "Covid New Patient",
+  "Concussion New",
+  "CF NEW ",
+  "GYN NEW PT",
+  "Hematology New Patient",
+  "Initial Eval/New",
+  "Lymphedema New",
+  "Medicare Wellness - New",
+  "New Cancer Patient",
+  "NEW EAR",
+  "New Lar",
+  "New Patient Continued",
+  "New Patient Extended",
+  "New Patient freeze",
+  "New Patient Only",
+  "New Patient pt",
+  "New Patient Start",
+  "NEW PATIENT-GERIATRICS",
+  "NEW RUNNING EVAL",
+  "New Vertigo Patient",
+  "NEW VOICE MODIFICATION",
+  "New/Follow-up",
+  "New/Fup/Hyl",
+  "OB NEW PATIENT",
+  "Onc PT New",
+  "Oncology New Patient",
+  "OPR Sports New",
+  "PA GYN NEW",
+  "PALL-NEW PT",
+  "PEDS CONCUSSION NEW",
+  "PEDS NEW",
+  "PEDS ORTHO NEW",
+  "Physical Exam - New",
+  "SINUS NEW",
+  "Sports New",
+  # "Travel NP",
+  "VESTIBULAR NEW",
+  "Zocdoc New",
+  "New Patient 14-Day",
+  "New Patient 21-Day",
+  "New Patient 28-Day",
+  "New Patient 7-Day"
+)
+
+release_blocks <- c(
+  "New Patient 14-Day",
+  "New Patient 21-Day",
+  "New Patient 28-Day",
+  "New Patient 7-Day"
+)
+
+```
+
+
 ```{r Late Releasing Slots, echo = FALSE, warning = FALSE, message = FALSE}
 
 # Slot Block Data --------------------------------------------------------------
@@ -375,35 +435,23 @@ late_block_raw$Provider <- prov_mapping$PROV_NAME[match(late_block_raw$PROV_ID, 
 
 ```{r Block Usage Audit, echo = FALSE, warning = FALSE, message = FALSE}
 
-# # Block Type Usage Audit Data =================================================
-# ## Count of Block Type Usage --------------------------------------------------
-# block_usage <- late_block_raw %>%
-#   group_by(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, BLOCK_C, block_name) %>%
-#   summarise(total = n())
-
 ## Count of Block Combination Usage --------------------------------------------
 block_combination_usage <- late_block_raw %>%
-  arrange(Campus, DEPARTMENT_ID, Department, SLOT_BEGIN_TIME, block_name, org_block_name) %>%
+  arrange(Campus, DEPARTMENT_ID, Department, SLOT_BEGIN_TIME) %>%
   group_by(Campus, DEPARTMENT_ID, Department, Provider, SLOT_BEGIN_TIME) %>%
   mutate(block_combination = paste0(unique(comb_block_name), collapse = ', ')) %>%
-  # mutate(block_combination = paste0(unique(block_name[block_name!='']), collapse = ', ')) %>%
+  mutate(total_blocks = length(unique(comb_block_name))) %>%
   mutate(Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-  group_by(Campus, DEPARTMENT_ID, Department, Provider, Slot.DateYear, block_combination) %>%
-  summarise(total_slots = length(unique(SLOT_BEGIN_TIME)),
-            total_blocks = n()) %>%
+  group_by(Campus, DEPARTMENT_ID, Department, Provider, Slot.DateYear, block_combination, total_blocks) %>%
+  summarise(total_slots = length(unique(SLOT_BEGIN_TIME))) %>%
   rename(Site = Campus) 
   
 
 ## Flag Incorrectly Built Slots ------------------------------------------------
 block_combination_usage <- block_combination_usage %>%
-  mutate(slot_incorrect = case_when(total_blocks >1 & str_detect(block_combination, "New Patient 7-Day|New Patient 14-Day|New Patient 21-Day|New Patient 28-Day") ~ "Yes",
+  mutate(slot_incorrect = case_when(total_blocks >1 & str_detect(block_combination, str_c(release_blocks, collapse = "|")) ~ "Yes",
                                     TRUE ~ "No"))
-
-# ## Unique Block Types ----------------------------------------------------------
-# block_type <- late_block_raw %>%
-#   group_by(BLOCK_C, block_name) %>%
-#   summarise(total = n())
 
 ```
 
@@ -501,7 +549,7 @@ knitr::include_graphics("Mount_Sinai_Logo_H.png")
 ```
 
 
-# Late-Releasing Blocks for New Patient Visits 
+# Late-Releasing Blocks for New Patient Visits {.tabset .tabset-fade .tabset-pills}
 *Report run date: `r report_run_date`*<br/>
 ______________________________________________________________________________________________________________________________
 <br/>
@@ -731,7 +779,20 @@ ________________________________________________________________________________
 ```
 
 
-## Block Type Usage 
+<!-- ## Time Release of Blocks Usage  -->
+<!-- ```{r Time Release Block Utilization, echo = FALSE, warning = FALSE, message = FALSE} -->
+
+<!-- new_block_utilization <- block_combination_usage %>% -->
+<!--   mutate(new_block = case_when(str_detect(block_combination, str_c(new_blocks, collapse = "|")) ~ "Yes", -->
+<!--                                TRUE ~ "No"))  %>% -->
+<!--   mutate(late_release_block = case_when(str_detect(block_combination, str_c(release_blocks, collapse = "|")) ~ "Yes", -->
+<!--                                TRUE ~ "No")) -->
+
+
+<!-- ``` -->
+
+
+## Time Release of Block Build
 ```{r Block Combination Output (Slot Count), echo = FALSE, warning = FALSE, message = FALSE}
 
 # Table Output -----------------------------------------------------------------
@@ -866,3 +927,4 @@ reactable(
  )
 )
 ```
+
