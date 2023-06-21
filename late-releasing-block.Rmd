@@ -359,78 +359,97 @@ late_block_raw <- block_raw_tbl %>%
   mutate(Slot.YearMonth = format(as.Date(Slot.DateYear), "%Y-%m"))
 
 late_block_raw$block_name <- block_name_raw$NAME[match(late_block_raw$BLOCK_C, block_name_raw$APPT_BLOCK_C)]
+late_block_raw$org_block_name <- block_name_raw$NAME[match(late_block_raw$REL_BLOCK_C, block_name_raw$APPT_BLOCK_C)]
 
+late_block_raw <- late_block_raw %>%
+  mutate(comb_block_name = ifelse(is.na(org_block_name), block_name, org_block_name))
 
 # Map Department and Provider Name ---------------------------------------------
 late_block_raw$Campus <- dept_mapping$SITE[match(late_block_raw$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 late_block_raw$Department <- dept_mapping$DEPARTMENT_NAME[match(late_block_raw$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 late_block_raw$Provider <- prov_mapping$PROV_NAME[match(late_block_raw$PROV_ID, prov_mapping$PROV_ID)]
 
+
 ```
 
 
 ```{r Block Usage Audit, echo = FALSE, warning = FALSE, message = FALSE}
 
-# Block Type Usage Audit Data =================================================
-## Count of Block Type Usage --------------------------------------------------
-block_usage <- late_block_raw %>%
-  group_by(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, BLOCK_C, block_name) %>%
-  summarise(total = n())
+# # Block Type Usage Audit Data =================================================
+# ## Count of Block Type Usage --------------------------------------------------
+# block_usage <- late_block_raw %>%
+#   group_by(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, BLOCK_C, block_name) %>%
+#   summarise(total = n())
 
 ## Count of Block Combination Usage --------------------------------------------
 block_combination_usage <- late_block_raw %>%
-  arrange(Campus, DEPARTMENT_ID, Department, SLOT_BEGIN_TIME, block_name) %>%
+  arrange(Campus, DEPARTMENT_ID, Department, SLOT_BEGIN_TIME, block_name, org_block_name) %>%
   group_by(Campus, DEPARTMENT_ID, Department, Provider, SLOT_BEGIN_TIME) %>%
-  summarise(block_combination = paste0(unique(block_name[block_name!='']), collapse = ', ')) %>%
+  mutate(block_combination = paste0(unique(comb_block_name), collapse = ', ')) %>%
+  # mutate(block_combination = paste0(unique(block_name[block_name!='']), collapse = ', ')) %>%
   mutate(Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-  group_by(Campus, DEPARTMENT_ID, Department, Provider, Slot.Year, Slot.Month, block_combination) %>%
-  summarise(total = n()) %>%
-  rename(Site = Campus,
-         total_slots = total)
+  group_by(Campus, DEPARTMENT_ID, Department, Provider, Slot.DateYear, block_combination) %>%
+  summarise(total_slots = length(unique(SLOT_BEGIN_TIME)),
+            total_blocks = n()) %>%
+  rename(Site = Campus) 
+  
 
-## Unique Block Types ----------------------------------------------------------
-block_type <- late_block_raw %>%
-  group_by(BLOCK_C, block_name) %>%
-  summarise(total = n())
+## Flag Incorrectly Built Slots ------------------------------------------------
+block_combination_usage <- block_combination_usage %>%
+  mutate(slot_incorrect = case_when(total_blocks >1 & str_detect(block_combination, "New Patient 7-Day|New Patient 14-Day|New Patient 21-Day|New Patient 28-Day") ~ "Yes",
+                                    TRUE ~ "No"))
+
+# ## Unique Block Types ----------------------------------------------------------
+# block_type <- late_block_raw %>%
+#   group_by(BLOCK_C, block_name) %>%
+#   summarise(total = n())
+
+```
 
 
-# require(openxlsx)
-# data_list <- list("Unique Blocks" = block_type,
-#                   "Block Usage" = block_usage,
-#                   "Block Combination Usage" = block_combination_usage)
-# write.xlsx(data_list, "Block Types and Usage_5.17.2023.xlsx")
+```{r}
+# 
+# avail_raw <- availability_raw_tbl %>%
+#   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
+#          Slot.Year = year(SLOT_BEGIN_TIME),
+#          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
+#   filter(Slot.Year == 2023) %>%
+#   filter(Slot.Month == 05) %>%
+#   collect() %>%
+#   mutate(Slot.YearMonth = format(as.Date(Slot.DateYear), "%Y-%m"))
+  
 
 ```
 
 
 ```{r Report Processing, echo = FALSE, warning = FALSE, message = FALSE}
 
-late_block_summary <- late_block_raw %>%
-  arrange(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, SLOT_BEGIN_TIME, block_name) %>%
-  group_by(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, SLOT_BEGIN_TIME, Slot.YearMonth) %>%
-  summarise(block_combination = paste0(unique(block_name[block_name!='']), collapse = ', ')) %>%
-  group_by(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, Slot.YearMonth, block_combination) %>%
-  summarise(total = n())
-
-late_block_summary <- late_block_summary %>%
-  mutate(block_category = case_when(str_detect(block_combination, "New Patient 7-Day|New Patient 14-Day|New Patient 21-Day|New Patient 28-Day") ~ "Late-Releasing",
-                                    TRUE ~ "Non-Late-Releasing"))
-
-late_block_summary <- late_block_summary %>%
-  pivot_wider(names_from = "block_category",
-              values_from = "total",
-              values_fill = 0)
-
-late_block_summary <- late_block_summary %>%
-  mutate(total_slots = sum(`Non-Late-Releasing`,`Late-Releasing`),
-         perc_late = round(`Late-Releasing`/total_slots,2)) %>%
-  rename(late_slots = `Late-Releasing`,
-         other_slots = `Non-Late-Releasing`)
-
-late_block_summary <- late_block_summary %>%
-  arrange(Campus, Department, Provider)
-  # mutate(Slot.DateYear = as.character(Slot.DateYear))
+# late_block_summary <- late_block_raw %>%
+#   arrange(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, SLOT_BEGIN_TIME, block_name) %>%
+#   group_by(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, SLOT_BEGIN_TIME, Slot.YearMonth) %>%
+#   summarise(block_combination = paste0(unique(block_name[block_name!='']), collapse = ', ')) %>%
+#   group_by(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, Slot.YearMonth, block_combination) %>%
+#   summarise(total = n())
+# 
+# late_block_summary <- late_block_summary %>%
+#   mutate(block_category = case_when(str_detect(block_combination, "New Patient 7-Day|New Patient 14-Day|New Patient 21-Day|New Patient 28-Day") ~ "Late-Releasing",
+#                                     TRUE ~ "Non-Late-Releasing"))
+# 
+# late_block_summary <- late_block_summary %>%
+#   pivot_wider(names_from = "block_category",
+#               values_from = "total",
+#               values_fill = 0)
+# 
+# late_block_summary <- late_block_summary %>%
+#   mutate(total_slots = sum(`Non-Late-Releasing`,`Late-Releasing`),
+#          perc_late = round(`Late-Releasing`/total_slots,2)) %>%
+#   rename(late_slots = `Late-Releasing`,
+#          other_slots = `Non-Late-Releasing`)
+# 
+# late_block_summary <- late_block_summary %>%
+#   arrange(Campus, Department, Provider)
+#   # mutate(Slot.DateYear = as.character(Slot.DateYear))
 
 ```
 
@@ -738,7 +757,9 @@ htmltools::browsable(
 #     tags$hr("aria-hidden" = "true"),
 
 reactable(
-  block_combination_usage,
+  block_combination_usage %>%
+    dplyr::select(-total_blocks) %>%
+    mutate(Slot.DateYear = as.character(Slot.DateYear)),
   elementId = "block-type-count",
   # elementId = "cars-grouping-table",
   style = list(fontFamily = 'Calibri',
@@ -766,7 +787,7 @@ reactable(
             }
           },
 
-  groupBy = c("Site", "Department"),
+  groupBy = c("Site", "Department","Provider"),
 
   # columnGroups = list(
   #   # colGroup(name = paste0(format(as.Date(start_date), "%b"),"-",format(as.Date(end_date), "%b %Y"), " Visit Volume"), 
@@ -803,13 +824,17 @@ reactable(
     Provider = colDef(
       minWidth = 130),
     
-    Slot.Year = colDef(
-      name = "Year",
+    Slot.DateYear = colDef(
+      name = "Date",
       minWidth = 100),
     
-    Slot.Month = colDef(
-      name = "Month",
-      minWidth = 100),
+    # Slot.Year = colDef(
+    #   name = "Year",
+    #   minWidth = 100),
+    # 
+    # Slot.Month = colDef(
+    #   name = "Month",
+    #   minWidth = 100),
     
     # Slot.DateYear = colDef(
     #   name = "Date",
@@ -827,6 +852,11 @@ reactable(
       format = colFormat(separators = TRUE, digits = 0),
       style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
     ),
+    
+    slot_incorrect = colDef(
+      name = "Slot Incorrectly Built (Y/N)",
+      minWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px")),
     
     DEPARTMENT_ID = colDef(show=F)
   ) # Close Columns
