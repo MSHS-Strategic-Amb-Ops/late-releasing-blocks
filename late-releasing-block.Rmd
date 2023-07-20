@@ -619,7 +619,7 @@ reactable(
     ),
     
     NEW_BLOCK_TIME_RELEASE = colDef(
-      name = "Total New Blocks Converted to Time Release",
+      name = "Total Late-Releasing New Patient Blocks",
       maxWidth = 200,
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = 'sum',
@@ -645,7 +645,7 @@ reactable(
     ),
 
     NEW_BLOCK_TIME_RELEASE_PERC = colDef(
-      name = "% of New Blocks Converted to Time Release of Blocks",
+      name = "% of New Blocks Converted to Late-Releasing Blocks",
       maxWidth = 200,
      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = JS("function(values, rows) {
