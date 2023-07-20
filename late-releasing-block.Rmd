@@ -520,14 +520,14 @@ knitr::include_graphics("Mount_Sinai_Logo_H.png")
 ```
 
 
-# Late-Releasing Blocks for New Patient Visits {.tabset .tabset-fade .tabset-pills}
+# Late-Releasing New Patient Blocks for New Patient Visits {.tabset .tabset-fade .tabset-pills}
 *Report run date: `r report_run_date`*<br/>
 ______________________________________________________________________________________________________________________________
 <br/>
 <br/>
 
 
-## Time Release of Block Conversion
+## Late-Releasing New Patient Block Conversion
 ```{r Block Conversion Output (block Count), echo = FALSE, warning = FALSE, message = FALSE}
 
 # Table Output -----------------------------------------------------------------
@@ -610,7 +610,7 @@ reactable(
     ),
     
     TOTAL_NEW_BLOCKS = colDef(
-      name = "Total New Blocks",
+      name = "Total New Patient Blocks",
       maxWidth = 100,
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = 'sum',
@@ -619,7 +619,7 @@ reactable(
     ),
     
     NEW_BLOCK_TIME_RELEASE = colDef(
-      name = "Total Late-Releasing New Patient Blocks",
+      name = "Total New Patient Blocks Converted to Late-Releasing New Patient Blocks",
       maxWidth = 200,
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = 'sum',
@@ -628,7 +628,7 @@ reactable(
     ),
 
     NEW_BLOCK_PERC = colDef(
-      name = "% of New Blocks",
+      name = "% of New Patient Blocks",
       maxWidth = 200,
      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = JS("function(values, rows) {
@@ -645,7 +645,7 @@ reactable(
     ),
 
     NEW_BLOCK_TIME_RELEASE_PERC = colDef(
-      name = "% of New Blocks Converted to Late-Releasing Blocks",
+      name = "% of New Patient Blocks Converted to Late-Releasing New Patient Blocks",
       maxWidth = 200,
      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = JS("function(values, rows) {
@@ -677,7 +677,7 @@ reactable(
 <br/>
 <br/>
 
-## Time Release of Block Build
+## Late-Releasing New Patient Block Build
 ```{r Block Combination Output (Slot Count), echo = FALSE, warning = FALSE, message = FALSE}
 
 # Table Output -----------------------------------------------------------------
