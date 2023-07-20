@@ -323,11 +323,12 @@ report_run_date <- Sys.Date()
 
 ```
 
+
 ```{r Department and Provider Mapping, echo = FALSE, warning = FALSE, message = FALSE}
 
 # Department and Provider Mapping ----------------------------------------------
 dept_mapping <- access_raw_tbl %>%
-  group_by(SITE, DEPARTMENT_ID, DEPARTMENT_NAME) %>%
+  group_by(SITE, DEPARTMENT_ID, DEPARTMENT_NAME, DEPT_SPECIALTY_NAME) %>%
   summarise(total = n()) %>%
   collect() %>%
   dplyr::select(-total)
@@ -347,7 +348,6 @@ block_name_raw <- block_name_tbl %>%
 
 
 ```{r New Patient Blocks, echo = FALSE, warning = FALSE, message = FALSE}
-
 
 new_blocks <- c(
   "GMA New Pt",
@@ -387,7 +387,7 @@ new_blocks <- c(
   "Physical Exam - New",
   "SINUS NEW",
   "Sports New",
-  # "Travel NP",
+  "Travel NP",
   "VESTIBULAR NEW",
   "Zocdoc New",
   "New Patient 14-Day",
@@ -428,21 +428,26 @@ late_block_raw <- late_block_raw %>%
 late_block_raw$Campus <- dept_mapping$SITE[match(late_block_raw$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 late_block_raw$Department <- dept_mapping$DEPARTMENT_NAME[match(late_block_raw$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 late_block_raw$Provider <- prov_mapping$PROV_NAME[match(late_block_raw$PROV_ID, prov_mapping$PROV_ID)]
-
-
+late_block_raw$Campus.Specialty <- dept_mapping$DEPT_SPECIALTY_NAME[match(late_block_raw$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 ```
 
 
 ```{r Block Usage Audit, echo = FALSE, warning = FALSE, message = FALSE}
 
-## Count of Block Combination Usage --------------------------------------------
-block_combination_usage <- late_block_raw %>%
+# Block combinations by time slot ----------------------------------------------
+## Shows all blocks associated to each time slot -------------------------------
+blocks_combined <- late_block_raw %>%
+  ungroup() %>%
   arrange(Campus, DEPARTMENT_ID, Department, SLOT_BEGIN_TIME) %>%
   group_by(Campus, DEPARTMENT_ID, Department, Provider, SLOT_BEGIN_TIME) %>%
   mutate(block_combination = paste0(unique(comb_block_name), collapse = ', ')) %>%
   mutate(total_blocks = length(unique(comb_block_name))) %>%
   mutate(Slot.Year = year(SLOT_BEGIN_TIME),
-         Slot.Month = month(SLOT_BEGIN_TIME)) %>%
+         Slot.Month = month(SLOT_BEGIN_TIME))
+
+
+## Count of Block Combination Usage --------------------------------------------
+block_combination_usage <- blocks_combined %>%
   group_by(Campus, DEPARTMENT_ID, Department, Provider, Slot.DateYear, block_combination, total_blocks) %>%
   summarise(total_slots = length(unique(SLOT_BEGIN_TIME))) %>%
   rename(Site = Campus) 
@@ -456,92 +461,58 @@ block_combination_usage <- block_combination_usage %>%
 ```
 
 
-```{r}
-# 
-# avail_raw <- availability_raw_tbl %>%
-#   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
-#          Slot.Year = year(SLOT_BEGIN_TIME),
-#          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-#   filter(Slot.Year == 2023) %>%
-#   filter(Slot.Month == 05) %>%
-#   collect() %>%
-#   mutate(Slot.YearMonth = format(as.Date(Slot.DateYear), "%Y-%m"))
+```{r Time Release Block Conversion, echo = FALSE, warning = FALSE, message = FALSE}
+
+# Categorize slots by non-new vs. new vs. new time-relese 
+late_block_raw <- blocks_combined %>%
+  mutate(new_block = case_when(comb_block_name %in% new_blocks ~ "NEW_BLOCK",
+                               TRUE ~ "NON_NEW_BLOCK"),
+         release_block = case_when(comb_block_name %in% release_blocks ~ "TIME_RELEASE",
+                                   TRUE ~ "NON_TIME_RELEASE")) %>%
+  group_by(Campus, Campus.Specialty, Department, DEPARTMENT_ID, Provider, Slot.YearMonth, SLOT_BEGIN_TIME, block_combination, new_block, release_block) %>%
+  summarise(total = n()) 
   
 
+# Summary of slot type by month   
+new_block_conversion <- late_block_raw %>%
+  pivot_wider(names_from = c("new_block","release_block"),
+              values_from = total,
+              values_fill = 0) %>%
+  mutate(NON_NEW_BLOCK_NON_TIME_RELEASE = ifelse(NON_NEW_BLOCK_NON_TIME_RELEASE>0 & NEW_BLOCK_NON_TIME_RELEASE==0 & NEW_BLOCK_TIME_RELEASE==0,1,0),
+         NEW_BLOCK_NON_TIME_RELEASE = ifelse(NEW_BLOCK_NON_TIME_RELEASE>0 & NEW_BLOCK_TIME_RELEASE==0,1,0),
+         NEW_BLOCK_TIME_RELEASE = ifelse(NEW_BLOCK_TIME_RELEASE>0,1,0)) %>%
+  group_by(Campus, Campus.Specialty, Department,  DEPARTMENT_ID, Provider, Slot.YearMonth) %>%
+  summarise(NON_NEW_BLOCK_NON_TIME_RELEASE = sum(NON_NEW_BLOCK_NON_TIME_RELEASE),
+            NEW_BLOCK_NON_TIME_RELEASE = sum(NEW_BLOCK_NON_TIME_RELEASE),
+            NEW_BLOCK_TIME_RELEASE = sum(NEW_BLOCK_TIME_RELEASE)) %>%
+  mutate(DEPARTMENT_ID = as.character(DEPARTMENT_ID)) %>%
+  rowwise() %>% 
+  mutate(TOTAL_BLOCKS = sum(c_across(where(is.numeric)), na.rm = T)) %>%
+  mutate(TOTAL_NEW_BLOCKS = NEW_BLOCK_NON_TIME_RELEASE + NEW_BLOCK_TIME_RELEASE,
+         NEW_BLOCK_PERC = round(TOTAL_NEW_BLOCKS/TOTAL_BLOCKS,2),
+         NEW_BLOCK_TIME_RELEASE_PERC = round(NEW_BLOCK_TIME_RELEASE/TOTAL_NEW_BLOCKS,2)) %>%
+  arrange(Campus, Department, Provider)
+
+
+order <- c("Campus","Campus.Specialty","Department","DEPARTMENT_ID","Provider","Slot.YearMonth",
+           "TOTAL_BLOCKS","TOTAL_NEW_BLOCKS",
+           "NON_NEW_BLOCK_NON_TIME_RELEASE","NEW_BLOCK_NON_TIME_RELEASE","NEW_BLOCK_TIME_RELEASE",
+           "NEW_BLOCK_PERC", "NEW_BLOCK_TIME_RELEASE_PERC")
+
+new_block_conversion <- new_block_conversion[order]
+
+new_block_conversion$NEW_BLOCK_PERC[is.nan(new_block_conversion$NEW_BLOCK_PERC)]<-NA
+new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC[is.nan(new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC)]<-NA
+
 ```
 
 
-```{r Report Processing, echo = FALSE, warning = FALSE, message = FALSE}
+```{r Time Release of Block Duration vs. Appt Length, echo = FALSE, warning = FALSE, message = FALSE}
 
-# late_block_summary <- late_block_raw %>%
-#   arrange(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, SLOT_BEGIN_TIME, block_name) %>%
-#   group_by(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, SLOT_BEGIN_TIME, Slot.YearMonth) %>%
-#   summarise(block_combination = paste0(unique(block_name[block_name!='']), collapse = ', ')) %>%
-#   group_by(Campus, DEPARTMENT_ID, Department, PROV_ID, Provider, Slot.YearMonth, block_combination) %>%
-#   summarise(total = n())
-# 
-# late_block_summary <- late_block_summary %>%
-#   mutate(block_category = case_when(str_detect(block_combination, "New Patient 7-Day|New Patient 14-Day|New Patient 21-Day|New Patient 28-Day") ~ "Late-Releasing",
-#                                     TRUE ~ "Non-Late-Releasing"))
-# 
-# late_block_summary <- late_block_summary %>%
-#   pivot_wider(names_from = "block_category",
-#               values_from = "total",
-#               values_fill = 0)
-# 
-# late_block_summary <- late_block_summary %>%
-#   mutate(total_slots = sum(`Non-Late-Releasing`,`Late-Releasing`),
-#          perc_late = round(`Late-Releasing`/total_slots,2)) %>%
-#   rename(late_slots = `Late-Releasing`,
-#          other_slots = `Non-Late-Releasing`)
-# 
-# late_block_summary <- late_block_summary %>%
-#   arrange(Campus, Department, Provider)
-#   # mutate(Slot.DateYear = as.character(Slot.DateYear))
+
+
 
 ```
-
-
-<!-- ```{r Report Processing, echo = FALSE, warning = FALSE, message = FALSE} -->
-<!-- # Categorize Block Type: Late Releasing vs. Other  -->
-<!-- late_block_raw <- late_block_raw %>% -->
-<!--   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME) %>% -->
-<!--   mutate(late_release_allowed = ifelse(any(BLOCK_C %in% c("578","579","580","581")) == FALSE, "Other", ""), -->
-<!--          late_release_allowed_7 = ifelse(any(BLOCK_C == "578") == TRUE, "NEW PATIENT 7-DAY", ""), -->
-<!--          late_release_allowed_14 = ifelse(any(BLOCK_C == "579") == TRUE, "NEW PATIENT 14-DAY", ""), -->
-<!--          late_release_allowed_21 = ifelse(any(BLOCK_C == "580") == TRUE, "NEW PATIENT 21-DAY", ""), -->
-<!--          late_release_allowed_28 = ifelse(any(BLOCK_C == "581") == TRUE, "NEW PATIENT 28-DAY", "")) -->
-
-<!-- late_block_summary <- late_block_raw %>% -->
-<!--   group_by(Campus, Department, Provider, SLOT_BEGIN_TIME, Slot.DateYear, Slot.YearMonth, -->
-<!--            late_release_allowed, late_release_allowed_7, late_release_allowed_14, late_release_allowed_21, late_release_allowed_28) %>% -->
-<!--   summarise(total = n()) -->
-
-<!-- late_block_summary[is.na(late_block_summary)] <- "" -->
-
-<!-- late_block_summary <- late_block_summary %>% -->
-<!--     mutate(slot_category = trim(paste(late_release_allowed, late_release_allowed_7, late_release_allowed_14, late_release_allowed_21, late_release_allowed_28))) -->
-
-
-<!-- late_block_usage <- late_block_summary %>% -->
-<!--   group_by(Campus, Department, Provider, Slot.YearMonth, Slot.DateYear, slot_category) %>% -->
-<!--   summarise(category_slots = n()) %>% -->
-<!--   pivot_wider(names_from = slot_category, -->
-<!--               values_from = category_slots, -->
-<!--               values_fill = 0) %>% -->
-<!--   ungroup() %>% -->
-<!--   add_column(total_slots= "", .before = "Other") %>% -->
-<!--   add_column(perc_late = "", .after = "total_slots") -->
-
-<!-- late_block_usage <- late_block_usage %>% -->
-<!--   mutate(total_slots = rowSums(across(8:length(late_block_usage)), na.rm = T)) %>% -->
-<!--   mutate(perc_late = round((total_slots - Other)/total_slots,2)) %>% -->
-<!--   dplyr::select(1:8, 'NEW PATIENT 7-DAY', 'NEW PATIENT 14-DAY', 'NEW PATIENT 21-DAY', 'NEW PATIENT 28-DAY', 'NEW PATIENT 7-DAY NEW PATIENT 14-DAY') -->
-
-<!-- late_block_usage <- late_block_usage %>% -->
-<!--   mutate(Slot.DateYear = as.character(Slot.DateYear)) -->
-
-<!-- ``` -->
 
 
 ```{r Sinai Logo, echo=FALSE, out.width = '15%'}
@@ -556,241 +527,155 @@ ________________________________________________________________________________
 <br/>
 
 
-```{r Late Releasing Block Output (Slot Count), echo = FALSE, warning = FALSE, message = FALSE}
+## Time Release of Block Conversion
+```{r Block Conversion Output (block Count), echo = FALSE, warning = FALSE, message = FALSE}
 
-# # Table Output -----------------------------------------------------------------
+# Table Output -----------------------------------------------------------------
+htmltools::browsable(
+  tagList(
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download Table"),
+      onclick = "Reactable.downloadDataCSV('block-conversion', 'Block Conversion')"
+    ),
+
 # htmltools::browsable(
 #   tagList(
-#     tags$button(
-#       tagList(fontawesome::fa("download"), "Download Table"),
-#       onclick = "Reactable.downloadDataCSV('late-releasing-count', 'Late-Releasing Blocks')"
+#     div(tags$label("Group by", `for` = "cars-grouping-select")),
+#     tags$select(
+#       id = "cars-grouping-select",
+#       onchange = "Reactable.setGroupBy('cars-grouping-table', this.value ? [this.value] : [])",
+#       tags$option("None", value = c("Campus","Campus.Specialty.Group")),
+#       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")),
+#       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#       lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
 #     ),
-# 
-# # htmltools::browsable(
-# #   tagList(
-# #     div(tags$label("Group by", `for` = "cars-grouping-select")),
-# #     tags$select(
-# #       id = "cars-grouping-select",
-# #       onchange = "Reactable.setGroupBy('cars-grouping-table', this.value ? [this.value] : [])",
-# #       tags$option("None", value = c("Campus","Campus.Specialty.Group")),
-# #       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")),
-# #       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
-# #       lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
-# #     ),
-# # 
-# #     tags$hr("aria-hidden" = "true"),
-# 
-# reactable(
-#   late_block_summary,
-#   elementId = "late-releasing-count",
-#   # elementId = "cars-grouping-table",
-#   style = list(fontFamily = 'Calibri',
-#                  fontSize = '14px'),
-#     defaultColDef = colDef(align = "left",
-#                            headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
-#                            headerClass = "bar-sort-header"),
-#   # RowStyle = function(index) {
-#   #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
-#   #             list(`border-top` = "2px solid rgb(184,184,184)",
-#   #                  fontWeight = "Bold")
-#   #           }
-#   #         },
-#     highlight = TRUE,
-#     # filterable = TRUE,
-#     pagination = FALSE,
-#     # height = 800,
-#     wrap = TRUE,
-#   searchable = TRUE,
-#   
-#   rowStyle = function(index) {
-#             if (index %in% c(10)) {
-#               list(`border-top` = "2px solid rgb(184,184,184)",
-#                    fontWeight = "Bold")
-#             }
-#           },
-# 
-#   groupBy = c("Campus", "Department", "Provider", "Slot.YearMonth"),
-# 
-#   # columnGroups = list(
-#   #   # colGroup(name = paste0(format(as.Date(start_date), "%b"),"-",format(as.Date(end_date), "%b %Y"), " Visit Volume"), 
-#   #   #          columns = c("Total", "new_perc"),
-#   #   #          headerStyle = list(color = "#212070", fontSize = "16px")),
-#   #   # colGroup(name = paste0(format(as.Date(start_date), "%b"),"-",format(as.Date(end_date), "%b %Y"), " No Show Rate"), 
-#   #   #          columns = c("noShow_rate", "noShow_rate_Established", "noShow_rate_New"),
-#   #   #          headerStyle = list(color = "#d80b8c", fontSize = "16px"))
-#   #   colGroup(name = "", 
-#   #            columns = c("Campus","Campus.Specialty.Group"), sticky = "left", 
-#   #            headerStyle = list(fontSize = "16px")),
-#   #   colGroup(name = paste0(current_year, " YTD Visit Volume"), 
-#   #            columns = c("Arrived","arrived_perc","new_perc"),
-#   #            headerStyle = list(color = "#212070", fontSize = "16px")),
-#   #   colGroup(name = "No Show Plus Rate - All", 
-#   #            columns = c("noShow_rate", "noShow_rate_sameDay", "noShow_rate_belowFourteen", "noShow_rate_belowThirty", "noShow_rate_overThirty"),
-#   #            headerStyle = list(color = "#7f7f7f", fontSize = "16px")),
-#   #   colGroup(name = "No Show Plus Rate - Established", 
-#   #            columns = c("noShow_rate_Established", "noShow_rate_sameDay_Established", "noShow_rate_belowFourteen_Established", "noShow_rate_belowThirty_Established", "noShow_rate_overThirty_Established"),
-#   #            headerStyle = list(color = "#d80b8c", fontSize = "16px")),
-#   #   colGroup(name = "No Show Plus Rate - New", 
-#   #            columns = c("noShow_rate_New","noShow_rate_sameDay_New", "noShow_rate_belowFourteen_New","noShow_rate_belowThirty_New", "noShow_rate_overThirty_New"),
-#   #            headerStyle = list(color = "#00aeef", fontSize = "16px"))
-#   #   ),
-# 
-#   columns = list(
-# 
-#     Campus = colDef(
-#       name = "Site",
-#       minWidth = 180),
-# 
-#     Department = colDef(
-#       minWidth = 200),
-#     
-#     Provider = colDef(
-#       minWidth = 130),
-#     
-#     Slot.YearMonth = colDef(
-#       name = "Year-Month",
-#       minWidth = 100),
-#     
-#     # Slot.DateYear = colDef(
-#     #   name = "Date",
-#     #   minWidth = 100),
-#     
-#     block_combination = colDef(
-#       name = "Block Combination",
-#       minWidth = 200),
-#     
-#     total_slots = colDef(
-#       name = "Total Time Slots",
-#       maxWidth = 100,
-#       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
-#       aggregate = 'sum',
-#       format = colFormat(separators = TRUE, digits = 0),
-#       style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
-#     ),
-#     
-#     perc_late = colDef(
-#       name = "% Late-Releasing Blocks",
-#       maxWidth = 100,
-#      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
-#       aggregate = JS("function(values, rows) {
-#         let totaltotal_slots = 0
-#         let totallate_slots = 0
-#         rows.forEach(function(row) {
-#           totaltotal_slots += row['total_slots']
-#           totallate_slots += row['late_slots']
-#         })
-#         return (totallate_slots) / totaltotal_slots
-#       }"),
-#       format = colFormat(percent = TRUE, digits = 0),
-#       style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
-#     ),
-#     
-#     DEPARTMENT_ID = colDef(show =F),
-#     PROV_ID = colDef(show =F),
-#     other_slots = colDef(show =F),
-#     late_slots = colDef(show =F)
-#     
-#     
-#     
-#     
-#     
-#     
-#     # total_slots = colDef(
-#     #   name = "Total Time Slots",
-#     #   maxWidth = 120,
-#     #   headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
-#     #   aggregate = 'sum',
-#     #   format = colFormat(separators = TRUE, digits = 0),
-#     #   style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
-#     # ),
-#     # 
-#     # perc_late = colDef(
-#     #   name = "% Late-Releasing Blocks",
-#     #   maxWidth = 120,
-#     #  headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
-#     #   aggregate = JS("function(values, rows) {
-#     #     let totaltotal_slots = 0
-#     #     let totalOther = 0
-#     #     rows.forEach(function(row) {
-#     #       totaltotal_slots += row['total_slots']
-#     #       totalOther += row['Other']
-#     #     })
-#     #     return (totaltotal_slots - totalOther) / totaltotal_slots
-#     #   }"),
-#     #   format = colFormat(percent = TRUE, digits = 0),
-#     #   style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
-#     # ),
-#     # 
-#     # Other = colDef(
-#     #   name = "Non-Late-Reasing",
-#     #   maxWidth = 120,
-#     #   headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
-#     #   aggregate = 'sum',
-#     #   format = colFormat(separators = TRUE, digits = 0),
-#     #   style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
-#     # ),
-#     # 
-#     # `NEW PATIENT 7-DAY` = colDef(
-#     #   maxWidth = 120,
-#     #   headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
-#     #   aggregate = 'sum',
-#     #   format = colFormat(separators = TRUE, digits = 0),
-#     #   style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
-#     # ),
-#     # 
-#     # `NEW PATIENT 14-DAY` = colDef(
-#     #   maxWidth = 120,
-#     #   headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
-#     #   aggregate = 'sum',
-#     #   format = colFormat(separators = TRUE, digits = 0),
-#     #   style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
-#     # ),
-#     # 
-#     # `NEW PATIENT 21-DAY` = colDef(
-#     #   maxWidth = 120,
-#     #   headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
-#     #   aggregate = 'sum',
-#     #   format = colFormat(separators = TRUE, digits = 0),
-#     #   style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
-#     # ),
-#     # 
-#     # `NEW PATIENT 28-DAY` = colDef(
-#     #   maxWidth = 120,
-#     #   headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
-#     #   aggregate = 'sum',
-#     #   format = colFormat(separators = TRUE, digits = 0),
-#     #   style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
-#     # ),
-#     # 
-#     # `NEW PATIENT 7-DAY NEW PATIENT 14-DAY` = colDef(
-#     #   maxWidth = 120,
-#     #   headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
-#     #   aggregate = 'sum',
-#     #   format = colFormat(separators = TRUE, digits = 0),
-#     #   style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
-#     # )
-#     
-#   ) # Close Columns
-# 
-#   ) # Close Reactable
-# 
-#  )
-# )
+#
+#     tags$hr("aria-hidden" = "true"),
+
+reactable(
+  new_block_conversion %>%
+    mutate(Slot.YearMonth = as.character(Slot.YearMonth)),
+  elementId = "block-conversion",
+  # elementId = "cars-grouping-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left",
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+
+  rowStyle = function(index) {
+            if (index %in% c(10)) {
+              list(`border-top` = "2px solid rgb(184,184,184)",
+                   fontWeight = "Bold")
+            }
+          },
+
+  groupBy = c("Campus", "Department", "Provider", "Slot.YearMonth"),
+
+  columns = list(
+
+    Campus = colDef(
+      name = "Site",
+      minWidth = 180),
+
+    Department = colDef(
+      minWidth = 200),
+
+    Provider = colDef(
+      minWidth = 130),
+
+    Slot.YearMonth = colDef(
+      name = "Year-Month",
+      minWidth = 100),
+
+    TOTAL_BLOCKS = colDef(
+      name = "Total Blocks",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    TOTAL_NEW_BLOCKS = colDef(
+      name = "Total New Blocks",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    NEW_BLOCK_TIME_RELEASE = colDef(
+      name = "Total New Blocks Converted to Time Release",
+      maxWidth = 200,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+
+    NEW_BLOCK_PERC = colDef(
+      name = "% of New Blocks",
+      maxWidth = 200,
+     headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = JS("function(values, rows) {
+        let totalTOTAL_BLOCKS = 0
+        let totalTOTAL_NEW_BLOCKS = 0
+        rows.forEach(function(row) {
+          totalTOTAL_BLOCKS += row['TOTAL_BLOCKS']
+          totalTOTAL_NEW_BLOCKS += row['TOTAL_NEW_BLOCKS']
+        })
+        return (totalTOTAL_NEW_BLOCKS) / totalTOTAL_BLOCKS || '-'
+      }"),
+      format = colFormat(percent = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+
+    NEW_BLOCK_TIME_RELEASE_PERC = colDef(
+      name = "% of New Blocks Converted to Time Release of Blocks",
+      maxWidth = 200,
+     headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = JS("function(values, rows) {
+        let totalTOTAL_NEW_BLOCKS = 0
+        let totalNEW_BLOCK_TIME_RELEASE = 0
+        rows.forEach(function(row) {
+          totalTOTAL_NEW_BLOCKS += row['TOTAL_NEW_BLOCKS']
+          totalNEW_BLOCK_TIME_RELEASE += row['NEW_BLOCK_TIME_RELEASE']
+        })
+        return (totalNEW_BLOCK_TIME_RELEASE) / totalTOTAL_NEW_BLOCKS || '-'
+      }"),
+      format = colFormat(percent = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Campus.Specialty = colDef(show =F),
+    DEPARTMENT_ID = colDef(show =F),
+    NON_NEW_BLOCK_NON_TIME_RELEASE = colDef(show =F),
+    NEW_BLOCK_NON_TIME_RELEASE = colDef(show =F)
+
+  ) # Close Columns
+
+  ) # Close Reactable
+
+ )
+)
+
 ```
-
-
-<!-- ## Time Release of Blocks Usage  -->
-<!-- ```{r Time Release Block Utilization, echo = FALSE, warning = FALSE, message = FALSE} -->
-
-<!-- new_block_utilization <- block_combination_usage %>% -->
-<!--   mutate(new_block = case_when(str_detect(block_combination, str_c(new_blocks, collapse = "|")) ~ "Yes", -->
-<!--                                TRUE ~ "No"))  %>% -->
-<!--   mutate(late_release_block = case_when(str_detect(block_combination, str_c(release_blocks, collapse = "|")) ~ "Yes", -->
-<!--                                TRUE ~ "No")) -->
-
-
-<!-- ``` -->
-
+<br/>
+<br/>
 
 ## Time Release of Block Build
 ```{r Block Combination Output (Slot Count), echo = FALSE, warning = FALSE, message = FALSE}
