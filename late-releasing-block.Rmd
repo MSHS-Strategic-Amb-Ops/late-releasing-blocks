@@ -354,7 +354,6 @@ new_blocks <- c(
   "Endo New Patient",
   "Covid New Patient",
   "Concussion New",
-  "CF NEW",
   "GYN NEW PT", 
   "Hematology New Patient", 
   "Initial Eval/New", 
@@ -367,7 +366,8 @@ new_blocks <- c(
   "New Patient Extended", 
   "New Patient freeze", 
   "New Patient Only", 
-  "New Patient pt, New Patient Start", 
+  "New Patient pt", 
+  "New Patient Start", 
   "NEW PATIENT-GERIATRICS", 
   "NEW RUNNING EVAL", 
   "New Vertigo Patient", 
@@ -386,7 +386,6 @@ new_blocks <- c(
   "Physical Exam - New", 
   "SINUS NEW", 
   "Sports New", 
-  "Travel NP", 
   "VESTIBULAR NEW", 
   "Zocdoc New", 
   "New Patient 14-Day", 
@@ -398,25 +397,28 @@ new_blocks <- c(
   "Autoimmune New", 
   "CF NEW", 
   "COVID-19 SCREENING IN OFFICE NEW PATIENT", 
-  "COVID-19 SCREENING TELEHEALTH NEW PATIENT", 
   "Initial Visit", 
   "New Pt - Straight Medicare", 
   "NEW SELIKOFF", 
   "OPR New Patient", 
-  "Remote Monitoring Initial", 
-  "Telephone New Patient", 
-  "Video Visit New Extended", 
-  "Video Visit New Patient", 
   "WOMEN'S SPORTS PT NEW",
   "New Patient pt",
-  "New Patient Start"
+  "New Patient Start",
+  "NEW GYN 7-DAY",
+  "NEW GYN 14-DAY",
+  "NEW GYN 21-DAY",
+  "NEW GYN 28-DAY"
 )
 
 release_blocks <- c(
   "New Patient 14-Day",
   "New Patient 21-Day",
   "New Patient 28-Day",
-  "New Patient 7-Day"
+  "New Patient 7-Day",
+  "NEW GYN 7-DAY",
+  "NEW GYN 14-DAY",
+  "NEW GYN 21-DAY",
+  "NEW GYN 28-DAY"
 )
 
 ```
