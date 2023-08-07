@@ -542,107 +542,33 @@ new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC[is.nan(new_block_conversion$NEW
 
 ```{r Time Release of Block Duration vs. Appt Length, echo = FALSE, warning = FALSE, message = FALSE}
 
-# # Slot Length, Unavailability Information 
-# block_raw_test <- block_raw_tbl %>%
-#   head(10) %>%
-#   collect()
+# # Merge data for additional slot and appt details
+# block_raw_test <- late_block_raw %>%
+#   left_join(availability_raw_tbl %>% dplyr::select(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, SLOT_LENGTH, 
+#                                                    UNAVAILABLE_RSN_NAME, APPT_BLOCK_NAME, APPT_PRC_NAME, PAT_ENC_CSN_ID),
+#             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
+#   left_join(access_raw_tbl %>% dplyr::select(PAT_ENC_CSN_ID, PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM),
+#             by = c("PAT_ENC_CSN_ID")) %>%
+#   mutate(block_type = case_when(comb_block_name %in% new_blocks ~ "NEW_BLOCK",
+#                                TRUE ~ "NON_NEW_BLOCK")) %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, SLOT_BEGIN_TIME, block_type, comb_block_name,  
+#            SLOT_LENGTH, PAT_ENC_CSN_ID, APPT_PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM) %>%
+#   summarise(total_blocks = n()) %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, block_type, comb_block_name, SLOT_LENGTH, APPT_PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM) %>%
+#   summarise(total_blocks = n()) %>%
+#   collect() 
 # 
-# availability_raw_test <- availability_raw_tbl %>%
-#   head(10) %>%
-#   collect()
-# 
-# access_raw_test <- access_raw_tbl %>%
-#   head(10) %>%
-#   collect()
-# 
-# 
-# block_raw_test <- block_raw_tbl %>%
-#   left_join(availability_tbl %>% dplyr::select(APPT_BLOCK_C, NAME), 
-#             by = c("BLOCK_C" = "APPT_BLOCK_C")) %>%
-#   
-# 
-# 
+# block_raw_test <- block_raw_test %>%
+#   mutate(incorrect = ifelse(APPT_LENGTH>=SLOT_LENGTH, APPT_LENGTH  %% SLOT_LENGTH, SLOT_LENGTH %% APPT_LENGTH))
 # 
 # 
-#   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
-#          Slot.Year = year(SLOT_BEGIN_TIME),
-#          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-#   filter(Slot.Year == 2023) %>%
-#   filter(Slot.Month >= 04) %>%
-#   dplyr::select(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, NUM_APTS_SCHEDULED, ORG_REG_OPENINGS, ORG_OVBK_OPENINGS,
-#                 SLOT_LENGTH, UNAVAILABLE_RSN_NAME, PRIVATE_YN, APPT_OVERBOOK_YN, APPT_BLOCK_NAME,
-#                 APPT_PRC_NAME, PAT_ENC_CSN_ID, DAY_UNAVAIL_RSN_NAME, 
-#                 TIME_UNAVAIL_RSN_NAME, DAY_HELD_RSN_NAME, TIME_HELD_RSN_NAME, OUTSIDE_TEMPLATE_YN) %>%
-#   collect()
-# 
-# 
-# access_raw <- access_raw_tbl %>%
-#   mutate(Appt.DateYear = TO_DATE(CONTACT_DATE)) %>%
-#   mutate(Appt.Year = year(CONTACT_DATE),
-#          Appt.Month = month(CONTACT_DATE)) %>%
-#   filter(Appt.Year >= 2023) %>%
-#   filter(Appt.Month >= 04) %>%
-#   filter(DERIVED_STATUS_DESC == "Arrived") %>%
-#   group_by(DEPARTMENT_ID, PROV_ID, PROV_NAME_WID, VISIT_PROV_STAFF_RESOURCE_C,
-#            PRC_NAME, APPT_LENGTH, VISIT_TYPE, VISIT_METHOD, VISIT_GROUP_NUM) %>%
-#   summarise(total = n()) %>%
-#   collect() %>%
-#   dplyr::select(-total)
-# 
-# 
-# appt_type_mapping <- access_raw %>%
-#   group_by(DEPARTMENT_ID, PROV_ID, PROV_NAME_WID, VISIT_PROV_STAFF_RESOURCE_C,
-#            PRC_NAME, VISIT_TYPE, VISIT_METHOD, VISIT_GROUP_NUM) %>%
-#   summarise(total = n()) %>%
-#   dplyr::select(-total)
-#   
-# 
-# 
-# 
-# booked_appts <- availability_raw %>%
-#   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, SLOT_LENGTH, UNAVAILABLE_RSN_NAME, APPT_BLOCK_NAME, APPT_PRC_NAME, PAT_ENC_CSN_ID) %>%
-#   summarise(total = n()) %>%
-#   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, SLOT_LENGTH, UNAVAILABLE_RSN_NAME, APPT_BLOCK_NAME, APPT_PRC_NAME) %>%
-#   summarise(total_appts = n())
-# 
-# 
-# booked_appts <- left_join(booked_appts, appt_type_mapping, by = c("DEPARTMENT_ID" = "DEPARTMENT_ID",
-#                                                            "PROV_ID" = "PROV_ID",
-#                                                            "APPT_PRC_NAME" = "PRC_NAME"))
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# block_appt_dur_comparison <- blocks_combined %>%
-#   group_by(Campus, DEPARTMENT_ID, Department, Provider, Slot.Year, Slot.Month, Slot.YearMonth, Slot.DateYear, SLOT_BEGIN_TIME, block_combination) %>%
-#   summarise(total = n()) 
-# 
-# block_appt_dur_comparison <- block_appt_dur_comparison %>%
-#   group_by(DEPARTMENT_ID, Provider, Slot.DateYear) %>%
-#   mutate(previous_slot_time = lag(SLOT_BEGIN_TIME)) %>%
-#   mutate(block_length = difftime(SLOT_BEGIN_TIME, previous_slot_time, "mins"))
-# 
-# block_appt_dur_comparison <- block_appt_dur_comparison %>%
-#   mutate(block_length = as.numeric(block_length)/60)
-# 
-# block_appt_dur_comparison_summary <- block_appt_dur_comparison %>%
-#   filter(!is.na(block_length)) %>%
-#   group_by(Campus, DEPARTMENT_ID, Department, Provider, Slot.YearMonth, block_combination, block_length) %>%
-#   summarise(total_blocks = n()) 
-# 
-# 
-# test <- block_appt_dur_comparison_summary %>% 
-#   group_by(Campus, Department, Provider, block_length) %>%
-#   summarise(total = sum(total_blocks))
-#   
+# block_raw_test$Site <- dept_mapping$SITE[match(block_raw_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+# block_raw_test$Specialty <- dept_mapping$DEPT_SPECIALTY_NAME[match(block_raw_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+# block_raw_test$Department <- dept_mapping$DEPARTMENT_NAME[match(block_raw_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+# block_raw_test$Provider <- prov_mapping$PROV_NAME[match(block_raw_test$PROV_ID, prov_mapping$PROV_ID)]
+
+
+
 
 ```
 
@@ -752,7 +678,7 @@ reactable(
     
     
     correct_new_block = colDef(
-      name = "Clean Non-Late-Releasing Blocks",
+      name = "Individual Non-Late-Releasing Blocks",
       maxWidth = 100,
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = 'sum',
@@ -761,7 +687,7 @@ reactable(
     ),
     
     incorrect_new_block = colDef(
-      name = "Unclean Non-Late-Releasing Combo Blocks",
+      name = "Combination Non-Late-Releasing Blocks",
       maxWidth = 100,
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = 'sum',
@@ -770,7 +696,7 @@ reactable(
     ),
     
     correct_time_release_block = colDef(
-      name = "Clean Late-Releasing Blocks",
+      name = "Individual Late-Releasing Blocks",
       maxWidth = 100,
       headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = 'sum',
@@ -779,7 +705,7 @@ reactable(
     ),
     
     incorrect_time_release_block = colDef(
-      name = "Unclean Late-Releasing Combo Blocks",
+      name = "Combination Late-Releasing Blocks",
       maxWidth = 100,
       headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = 'sum',
