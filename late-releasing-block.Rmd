@@ -540,23 +540,56 @@ new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC[is.nan(new_block_conversion$NEW
 ```
 
 
+```{r Late-Releasing Wait Time, echo = FALSE, warning = FALSE, message = FALSE}
+
+# # Look at % of late-releasing conversion, No Show and Wait Times
+# ## Wait Time
+# wait_time <- access_raw_tbl %>%
+#   filter(VISIT_GROUP_NUM == 4) %>%
+#   mutate(Appt.DateYear = TO_DATE(CONTACT_DATE),
+#          Appt.Year = year(CONTACT_DATE),
+#          Appt.Month = month(CONTACT_DATE)) %>%
+#   filter(Appt.Year == 2023) %>%
+#   filter(Appt.Month >= 04) %>%
+#   mutate(wait_time = difftime(APPT_DTTM - APPT_MADE_DTTM, "days")) %>%
+#   filter(wait_time >= 0) %>%
+#   group_by(DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NAME_WID, Appt.Year, Appt.Month) %>%
+#   summarise(total = n(),
+#             new = sum(VISIT_GROUP_NUM == 4),
+#             new_14day = sum(VISIT_GROUP_NUM == 4 & wait_time <=14),
+#             med_wait_time = median(wait_time, na.rm = TRUE)) %>%
+#   mutate(new_perc = round(new/total),
+#          new_14day_perc = round(new_14day/new)) %>%
+#   show_query()
+#   collect()
+#   
+#   
+#   summarize(sumB = sum(B),
+#             sumBfoo = sum(B[A=="foo"]))
+# 
+# 
+
+```
+
+
 ```{r Time Release of Block Duration vs. Appt Length, echo = FALSE, warning = FALSE, message = FALSE}
 
 # # Merge data for additional slot and appt details
 # block_raw_test <- late_block_raw %>%
-#   left_join(availability_raw_tbl %>% dplyr::select(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, SLOT_LENGTH, 
+#   left_join(availability_raw_tbl %>% dplyr::select(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, SLOT_LENGTH,
 #                                                    UNAVAILABLE_RSN_NAME, APPT_BLOCK_NAME, APPT_PRC_NAME, PAT_ENC_CSN_ID),
 #             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
-#   left_join(access_raw_tbl %>% dplyr::select(PAT_ENC_CSN_ID, PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM),
+#   left_join(access_raw_tbl %>% dplyr::select(PAT_ENC_CSN_ID, PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM, APPT.MADE),
 #             by = c("PAT_ENC_CSN_ID")) %>%
+#   collect()
 #   mutate(block_type = case_when(comb_block_name %in% new_blocks ~ "NEW_BLOCK",
 #                                TRUE ~ "NON_NEW_BLOCK")) %>%
-#   group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, SLOT_BEGIN_TIME, block_type, comb_block_name,  
+#   group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, SLOT_BEGIN_TIME, block_type, comb_block_name,
 #            SLOT_LENGTH, PAT_ENC_CSN_ID, APPT_PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM) %>%
 #   summarise(total_blocks = n()) %>%
 #   group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, block_type, comb_block_name, SLOT_LENGTH, APPT_PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM) %>%
 #   summarise(total_blocks = n()) %>%
-#   collect() 
+#   collect()
 # 
 # block_raw_test <- block_raw_test %>%
 #   mutate(incorrect = ifelse(APPT_LENGTH>=SLOT_LENGTH, APPT_LENGTH  %% SLOT_LENGTH, SLOT_LENGTH %% APPT_LENGTH))
@@ -566,7 +599,7 @@ new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC[is.nan(new_block_conversion$NEW
 # block_raw_test$Specialty <- dept_mapping$DEPT_SPECIALTY_NAME[match(block_raw_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 # block_raw_test$Department <- dept_mapping$DEPARTMENT_NAME[match(block_raw_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 # block_raw_test$Provider <- prov_mapping$PROV_NAME[match(block_raw_test$PROV_ID, prov_mapping$PROV_ID)]
-
+# 
 
 
 
@@ -647,7 +680,10 @@ reactable(
     Site = colDef(
       name = "Site",
       minWidth = 180),
-
+    
+    Specialty = colDef(
+      minWidth = 200),
+    
     Department = colDef(
       minWidth = 200),
 
@@ -715,7 +751,7 @@ reactable(
     
     NEW_BLOCK_PERC = colDef(
       name = "% of New Patient Blocks",
-      maxWidth = 200,
+      maxWidth = 150,
      headerStyle = list(background = "#a5a7a5", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = JS("function(values, rows) {
         let totalTOTAL_BLOCKS = 0
@@ -732,7 +768,7 @@ reactable(
     
     NEW_BLOCK_TIME_RELEASE_PERC = colDef(
       name = "% of New Patient Blocks Converted to Late-Releasing Blocks",
-      maxWidth = 200,
+      maxWidth = 150,
      headerStyle = list(background = "#a5a7a5", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = JS("function(values, rows) {
         let totalTOTAL_NEW_BLOCKS = 0
@@ -747,7 +783,7 @@ reactable(
       style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
     ),
 
-    Specialty = colDef(show =F),
+    # Specialty = colDef(show =F),
     DEPARTMENT_ID = colDef(show =F),
     NON_NEW_BLOCK_NON_TIME_RELEASE = colDef(show =F),
     NEW_BLOCK_TIME_RELEASE = colDef(show =F),
