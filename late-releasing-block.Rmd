@@ -524,7 +524,7 @@ new_block_conversion <- blocks_combined_type %>%
   arrange(Site, Department, Provider)
 
 
-order <- c("Site","Specialty","Department","DEPARTMENT_ID","Provider","Slot.YearMonth",
+order <- c("Site","Department","Specialty","DEPARTMENT_ID","Provider","Slot.YearMonth",
            "TOTAL_BLOCKS","TOTAL_NEW_BLOCKS",
            "NON_NEW_BLOCK_NON_TIME_RELEASE","NEW_BLOCK_NON_TIME_RELEASE","NEW_BLOCK_TIME_RELEASE",
            "correct_new_block", "incorrect_new_block",
@@ -551,23 +551,23 @@ new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC[is.nan(new_block_conversion$NEW
 #          Appt.Month = month(CONTACT_DATE)) %>%
 #   filter(Appt.Year == 2023) %>%
 #   filter(Appt.Month >= 04) %>%
-#   mutate(wait_time = difftime(APPT_DTTM - APPT_MADE_DTTM, "days")) %>%
+#   mutate(wait_time = CONTACT_DATE - APPT_MADE_DATE) %>%
 #   filter(wait_time >= 0) %>%
 #   group_by(DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NAME_WID, Appt.Year, Appt.Month) %>%
-#   summarise(total = n(),
+#   summarise(total = n()) %>%
+#   collect()
 #             new = sum(VISIT_GROUP_NUM == 4),
-#             new_14day = sum(VISIT_GROUP_NUM == 4 & wait_time <=14),
+#             new_14day = sum((VISIT_GROUP_NUM == 4 & wait_time <=14)),
 #             med_wait_time = median(wait_time, na.rm = TRUE)) %>%
 #   mutate(new_perc = round(new/total),
 #          new_14day_perc = round(new_14day/new)) %>%
-#   show_query()
 #   collect()
-#   
-#   
+# 
+# 
 #   summarize(sumB = sum(B),
 #             sumBfoo = sum(B[A=="foo"]))
-# 
-# 
+
+
 
 ```
 
@@ -673,7 +673,7 @@ reactable(
             }
           },
 
-  groupBy = c("Site", "Department", "Provider", "Slot.YearMonth"),
+  groupBy = c("Site", "Department", "Specialty", "Provider", "Slot.YearMonth"),
 
   columns = list(
 
