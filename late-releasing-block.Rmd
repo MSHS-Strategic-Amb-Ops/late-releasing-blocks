@@ -352,53 +352,53 @@ new_blocks <- c(
   "Endo New Patient",
   "Covid New Patient",
   "Concussion New",
-  "GYN NEW PT", 
-  "Hematology New Patient", 
-  "Initial Eval/New", 
+  "GYN NEW PT",
+  "Hematology New Patient",
+  "Initial Eval/New",
   "Lymphedema New",
-  "Medicare Wellness - New", 
-  "New Cancer Patient", 
-  "NEW EAR", 
+  "Medicare Wellness - New",
+  "New Cancer Patient",
+  "NEW EAR",
   "New Lar",
-  "New Patient Continued", 
-  "New Patient Extended", 
-  "New Patient freeze", 
-  "New Patient Only", 
-  "New Patient pt", 
-  "New Patient Start", 
-  "NEW PATIENT-GERIATRICS", 
-  "NEW RUNNING EVAL", 
-  "New Vertigo Patient", 
-  "NEW VOICE MODIFICATION", 
-  "New/Follow-up", 
-  "New/Fup/Hyl", 
-  "OB NEW PATIENT", 
-  "Onc PT New", 
-  "Oncology New Patient", 
-  "OPR Sports New", 
-  "PA GYN NEW", 
-  "PALL-NEW PT", 
-  "PEDS CONCUSSION NEW", 
-  "PEDS NEW", 
-  "PEDS ORTHO NEW", 
-  "Physical Exam - New", 
-  "SINUS NEW", 
-  "Sports New", 
-  "VESTIBULAR NEW", 
-  "Zocdoc New", 
-  "New Patient 14-Day", 
-  "New Patient 21-Day", 
-  "New Patient 28-Day", 
-  "New Patient 7-Day", 
-  "ALS NEW", 
-  "APOS NEW", 
-  "Autoimmune New", 
-  "CF NEW", 
-  "COVID-19 SCREENING IN OFFICE NEW PATIENT", 
-  "Initial Visit", 
-  "New Pt - Straight Medicare", 
-  "NEW SELIKOFF", 
-  "OPR New Patient", 
+  "New Patient Continued",
+  "New Patient Extended",
+  "New Patient freeze",
+  "New Patient Only",
+  "New Patient pt",
+  "New Patient Start",
+  "NEW PATIENT-GERIATRICS",
+  "NEW RUNNING EVAL",
+  "New Vertigo Patient",
+  "NEW VOICE MODIFICATION",
+  "New/Follow-up",
+  "New/Fup/Hyl",
+  # "OB NEW PATIENT",
+  "Onc PT New",
+  "Oncology New Patient",
+  "OPR Sports New",
+  "PA GYN NEW",
+  "PALL-NEW PT",
+  "PEDS CONCUSSION NEW",
+  "PEDS NEW",
+  "PEDS ORTHO NEW",
+  "Physical Exam - New",
+  "SINUS NEW",
+  "Sports New",
+  "VESTIBULAR NEW",
+  "Zocdoc New",
+  "New Patient 14-Day",
+  "New Patient 21-Day",
+  "New Patient 28-Day",
+  "New Patient 7-Day",
+  "ALS NEW",
+  "APOS NEW",
+  "Autoimmune New",
+  "CF NEW",
+  "COVID-19 SCREENING IN OFFICE NEW PATIENT",
+  "Initial Visit",
+  "New Pt - Straight Medicare",
+  "NEW SELIKOFF",
+  "OPR New Patient",
   "WOMEN'S SPORTS PT NEW",
   "New Patient pt",
   "Pregnancy Confirmation",
@@ -431,7 +431,7 @@ late_block_raw <- block_raw_tbl %>%
          Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
   filter(Slot.Year == 2023) %>%
-  filter(Slot.Month >= 04) %>%
+  filter(Slot.Month >= 08) %>%
   left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME), 
             by = c("BLOCK_C" = "APPT_BLOCK_C")) %>%
   left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME), 
@@ -545,7 +545,6 @@ new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC[is.nan(new_block_conversion$NEW
 # # Look at % of late-releasing conversion, No Show and Wait Times
 # ## Wait Time
 # wait_time <- access_raw_tbl %>%
-#   filter(VISIT_GROUP_NUM == 4) %>%
 #   mutate(Appt.DateYear = TO_DATE(CONTACT_DATE),
 #          Appt.Year = year(CONTACT_DATE),
 #          Appt.Month = month(CONTACT_DATE)) %>%
@@ -553,21 +552,28 @@ new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC[is.nan(new_block_conversion$NEW
 #   filter(Appt.Month >= 04) %>%
 #   mutate(wait_time = CONTACT_DATE - APPT_MADE_DATE) %>%
 #   filter(wait_time >= 0) %>%
-#   group_by(DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NAME_WID, Appt.Year, Appt.Month) %>%
+#   mutate(New.PT2 = ifelse(is.na(VISIT_GROUP_NUM), "Established", "New"),
+#          new.14days = ifelse(wait_time <= 14, "Yes", "No")) %>%
+#   group_by(DEPARTMENT_ID, Appt.Year, Appt.Month, New.PT2) %>%
+#   mutate(med_wait_time_dept = median(wait_time, na.rm = TRUE)) %>%
+#   group_by(DEPARTMENT_ID, DEPARTMENT_NAME, med_wait_time_dept, PROV_ID, Appt.Year, Appt.Month, New.PT2) %>%
+#   mutate(med_wait_time_prov = median(wait_time, na.rm = TRUE)) %>%
+#   group_by(DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, Appt.Year, Appt.Month, med_wait_time_dept, med_wait_time_prov, New.PT2, new.14days) %>%
 #   summarise(total = n()) %>%
 #   collect()
-#             new = sum(VISIT_GROUP_NUM == 4),
-#             new_14day = sum((VISIT_GROUP_NUM == 4 & wait_time <=14)),
-#             med_wait_time = median(wait_time, na.rm = TRUE)) %>%
-#   mutate(new_perc = round(new/total),
-#          new_14day_perc = round(new_14day/new)) %>%
-#   collect()
 # 
-# 
-#   summarize(sumB = sum(B),
-#             sumBfoo = sum(B[A=="foo"]))
-
-
+# wait_time <- wait_time %>%
+#   group_by(DEPARTMENT_ID, Appt.Year, Appt.Month, new.14days) %>%
+#   mutate(new_14day_perc_dept = round(total/sum(total),2)) %>%
+#   ungroup() %>%
+#   group_by(DEPARTMENT_ID, Appt.Year, Appt.Month) %>%
+#   mutate(new_perc_dept = round(total/sum(total),2)) %>%
+#   ungroup() %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, Appt.Year, Appt.Month, new.14days) %>%
+#   mutate(new_14day_perc_prov = round(total/sum(total),2)) %>%
+#   ungroup() %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, Appt.Year, Appt.Month) %>%
+#   mutate(new_perc_provider = round(total/sum(total),2))
 
 ```
 
@@ -575,33 +581,29 @@ new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC[is.nan(new_block_conversion$NEW
 ```{r Time Release of Block Duration vs. Appt Length, echo = FALSE, warning = FALSE, message = FALSE}
 
 # # Merge data for additional slot and appt details
-# block_raw_test <- late_block_raw %>%
+# block_raw_test_test <- late_block_raw %>%
 #   left_join(availability_raw_tbl %>% dplyr::select(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, SLOT_LENGTH,
 #                                                    UNAVAILABLE_RSN_NAME, APPT_BLOCK_NAME, APPT_PRC_NAME, PAT_ENC_CSN_ID),
 #             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
-#   left_join(access_raw_tbl %>% dplyr::select(PAT_ENC_CSN_ID, PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM, APPT.MADE),
+#   left_join(access_raw_tbl %>% dplyr::select(PAT_ENC_CSN_ID, PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM, APPT_MADE_DATE),
 #             by = c("PAT_ENC_CSN_ID")) %>%
-#   collect()
 #   mutate(block_type = case_when(comb_block_name %in% new_blocks ~ "NEW_BLOCK",
 #                                TRUE ~ "NON_NEW_BLOCK")) %>%
 #   group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, SLOT_BEGIN_TIME, block_type, comb_block_name,
-#            SLOT_LENGTH, PAT_ENC_CSN_ID, APPT_PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM) %>%
+#            SLOT_LENGTH, PAT_ENC_CSN_ID, APPT_BLOCK_NAME, APPT_PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM) %>%
 #   summarise(total_blocks = n()) %>%
-#   group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, block_type, comb_block_name, SLOT_LENGTH, APPT_PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM) %>%
-#   summarise(total_blocks = n()) %>%
+#   # group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, block_type, comb_block_name, SLOT_LENGTH, APPT_BLOCK_NAME, APPT_PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM) %>%
+#   # summarise(total_blocks = n()) %>%
 #   collect()
 # 
-# block_raw_test <- block_raw_test %>%
+# block_raw_test_test <- block_raw_test_test %>%
 #   mutate(incorrect = ifelse(APPT_LENGTH>=SLOT_LENGTH, APPT_LENGTH  %% SLOT_LENGTH, SLOT_LENGTH %% APPT_LENGTH))
 # 
 # 
-# block_raw_test$Site <- dept_mapping$SITE[match(block_raw_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
-# block_raw_test$Specialty <- dept_mapping$DEPT_SPECIALTY_NAME[match(block_raw_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
-# block_raw_test$Department <- dept_mapping$DEPARTMENT_NAME[match(block_raw_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
-# block_raw_test$Provider <- prov_mapping$PROV_NAME[match(block_raw_test$PROV_ID, prov_mapping$PROV_ID)]
-# 
-
-
+# block_raw_test_test$Site <- dept_mapping$SITE[match(block_raw_test_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+# block_raw_test_test$Specialty <- dept_mapping$DEPT_SPECIALTY_NAME[match(block_raw_test_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+# block_raw_test_test$Department <- dept_mapping$DEPARTMENT_NAME[match(block_raw_test_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+# block_raw_test_test$Provider <- prov_mapping$PROV_NAME[match(block_raw_test_test$PROV_ID, prov_mapping$PROV_ID)]
 
 ```
 
