@@ -427,7 +427,6 @@ release_blocks <- c(
 
 # Slot Block Data --------------------------------------------------------------
 late_block_raw <- block_raw_tbl %>%
-  filter(DEPARTMENT_ID == 8001045) %>%
   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
          Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
