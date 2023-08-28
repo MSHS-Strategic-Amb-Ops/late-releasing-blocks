@@ -313,7 +313,7 @@ block_raw_tbl <- tbl(conn2, "AVAIL_BLOCK")
 block_name_tbl <- tbl(conn2, "ZC_APPT_BLOCK")
 orders_raw_tbl <- tbl(conn2, "ORDER_PROC")
 coverage_tbl <- tbl(conn2, "V_PAT_ENC_COVERAGE")
-
+template_tbl <- tbl(conn2, "TEMPLATE")
 
 ```
 
@@ -427,6 +427,7 @@ release_blocks <- c(
 
 # Slot Block Data --------------------------------------------------------------
 late_block_raw <- block_raw_tbl %>%
+  filter(DEPARTMENT_ID == 8001045) %>%
   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
          Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
@@ -438,7 +439,7 @@ late_block_raw <- block_raw_tbl %>%
             by = c("REL_BLOCK_C" = "APPT_BLOCK_C")) %>%
   rename(block_name = NAME.x,
          org_block_name = NAME.y) %>%
-  mutate(comb_block_name = trim(ifelse(is.na(org_block_name), block_name, org_block_name)))
+  mutate(comb_block_name = trim(ifelse(is.na(org_block_name), block_name, org_block_name))) 
   
 ```
 
@@ -501,7 +502,7 @@ new_block_conversion <- blocks_combined_type %>%
   pivot_wider(names_from = c("new_block","release_block"),
               values_from = total,
               values_fill = 0) %>%
-  mutate(incorrect_new_block = ifelse(NON_NEW_BLOCK_NON_TIME_RELEASE>0 & NEW_BLOCK_NON_TIME_RELEASE>0, 1, 0),
+  mutate(incorrect_new_block = ifelse(NON_NEW_BLOCK_NON_TIME_RELEASE>0 & NEW_BLOCK_NON_TIME_RELEASE>0 & NEW_BLOCK_TIME_RELEASE == 0, 1, 0),
          incorrect_time_release_block = ifelse(NON_NEW_BLOCK_NON_TIME_RELEASE>0 & NEW_BLOCK_TIME_RELEASE>0, 1, 0)) %>%
   mutate(NON_NEW_BLOCK_NON_TIME_RELEASE = ifelse(NON_NEW_BLOCK_NON_TIME_RELEASE>0 & NEW_BLOCK_NON_TIME_RELEASE==0 & NEW_BLOCK_TIME_RELEASE==0,1,0),
          NEW_BLOCK_NON_TIME_RELEASE = ifelse(NEW_BLOCK_NON_TIME_RELEASE>0 & NEW_BLOCK_TIME_RELEASE==0,1,0),
@@ -540,70 +541,64 @@ new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC[is.nan(new_block_conversion$NEW
 ```
 
 
-```{r Late-Releasing Wait Time, echo = FALSE, warning = FALSE, message = FALSE}
-
-# # Look at % of late-releasing conversion, No Show and Wait Times
-# ## Wait Time
-# wait_time <- access_raw_tbl %>%
-#   mutate(Appt.DateYear = TO_DATE(CONTACT_DATE),
-#          Appt.Year = year(CONTACT_DATE),
-#          Appt.Month = month(CONTACT_DATE)) %>%
-#   filter(Appt.Year == 2023) %>%
-#   filter(Appt.Month >= 04) %>%
-#   mutate(wait_time = CONTACT_DATE - APPT_MADE_DATE) %>%
-#   filter(wait_time >= 0) %>%
-#   mutate(New.PT2 = ifelse(is.na(VISIT_GROUP_NUM), "Established", "New"),
-#          new.14days = ifelse(wait_time <= 14, "Yes", "No")) %>%
-#   group_by(DEPARTMENT_ID, Appt.Year, Appt.Month, New.PT2) %>%
-#   mutate(med_wait_time_dept = median(wait_time, na.rm = TRUE)) %>%
-#   group_by(DEPARTMENT_ID, DEPARTMENT_NAME, med_wait_time_dept, PROV_ID, Appt.Year, Appt.Month, New.PT2) %>%
-#   mutate(med_wait_time_prov = median(wait_time, na.rm = TRUE)) %>%
-#   group_by(DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, Appt.Year, Appt.Month, med_wait_time_dept, med_wait_time_prov, New.PT2, new.14days) %>%
-#   summarise(total = n()) %>%
-#   collect()
-# 
-# wait_time <- wait_time %>%
-#   group_by(DEPARTMENT_ID, Appt.Year, Appt.Month, new.14days) %>%
-#   mutate(new_14day_perc_dept = round(total/sum(total),2)) %>%
-#   ungroup() %>%
-#   group_by(DEPARTMENT_ID, Appt.Year, Appt.Month) %>%
-#   mutate(new_perc_dept = round(total/sum(total),2)) %>%
-#   ungroup() %>%
-#   group_by(DEPARTMENT_ID, PROV_ID, Appt.Year, Appt.Month, new.14days) %>%
-#   mutate(new_14day_perc_prov = round(total/sum(total),2)) %>%
-#   ungroup() %>%
-#   group_by(DEPARTMENT_ID, PROV_ID, Appt.Year, Appt.Month) %>%
-#   mutate(new_perc_provider = round(total/sum(total),2))
-
-```
-
-
 ```{r Time Release of Block Duration vs. Appt Length, echo = FALSE, warning = FALSE, message = FALSE}
 
 # # Merge data for additional slot and appt details
-# block_raw_test_test <- late_block_raw %>%
+# block_appt_merged <- late_block_raw %>%
 #   left_join(availability_raw_tbl %>% dplyr::select(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, SLOT_LENGTH,
 #                                                    UNAVAILABLE_RSN_NAME, APPT_BLOCK_NAME, APPT_PRC_NAME, PAT_ENC_CSN_ID),
 #             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
-#   left_join(access_raw_tbl %>% dplyr::select(PAT_ENC_CSN_ID, PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM, APPT_MADE_DATE),
+#   left_join(access_raw_tbl %>% dplyr::select(PAT_ENC_CSN_ID, APPT_DTTM, PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM, APPT_MADE_DATE),
 #             by = c("PAT_ENC_CSN_ID")) %>%
 #   mutate(block_type = case_when(comb_block_name %in% new_blocks ~ "NEW_BLOCK",
 #                                TRUE ~ "NON_NEW_BLOCK")) %>%
-#   group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, SLOT_BEGIN_TIME, block_type, comb_block_name,
-#            SLOT_LENGTH, PAT_ENC_CSN_ID, APPT_BLOCK_NAME, APPT_PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM) %>%
-#   summarise(total_blocks = n()) %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, SLOT_BEGIN_TIME, block_type, comb_block_name, 
+#            SLOT_LENGTH, UNAVAILABLE_RSN_NAME, PAT_ENC_CSN_ID, APPT_BLOCK_NAME, APPT_PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM) %>%
+#   summarise(total_blocks = n()) 
 #   # group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, block_type, comb_block_name, SLOT_LENGTH, APPT_BLOCK_NAME, APPT_PRC_NAME, APPT_LENGTH, VISIT_GROUP_NUM) %>%
 #   # summarise(total_blocks = n()) %>%
-#   collect()
+#   # collect()
 # 
-# block_raw_test_test <- block_raw_test_test %>%
-#   mutate(incorrect = ifelse(APPT_LENGTH>=SLOT_LENGTH, APPT_LENGTH  %% SLOT_LENGTH, SLOT_LENGTH %% APPT_LENGTH))
+# # block_appt_merged  <- block_appt_merged  %>%
+# #   mutate(incorrect = ifelse(APPT_LENGTH>=SLOT_LENGTH, APPT_LENGTH  %% SLOT_LENGTH, SLOT_LENGTH %% APPT_LENGTH))
+# 
+# block_appt_merged <- block_appt_merged %>%
+#   collect() 
+# 
+# block_appt_merged$Site <- dept_mapping$SITE[match(block_appt_merged $DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+# block_appt_merged$Specialty <- dept_mapping$DEPT_SPECIALTY_NAME[match(block_appt_merged $DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+# block_appt_merged$Department <- dept_mapping$DEPARTMENT_NAME[match(block_appt_merged $DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+# block_appt_merged$Provider <- prov_mapping$PROV_NAME[match(block_appt_merged $PROV_ID, prov_mapping$PROV_ID)]
 # 
 # 
-# block_raw_test_test$Site <- dept_mapping$SITE[match(block_raw_test_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
-# block_raw_test_test$Specialty <- dept_mapping$DEPT_SPECIALTY_NAME[match(block_raw_test_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
-# block_raw_test_test$Department <- dept_mapping$DEPARTMENT_NAME[match(block_raw_test_test$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
-# block_raw_test_test$Provider <- prov_mapping$PROV_NAME[match(block_raw_test_test$PROV_ID, prov_mapping$PROV_ID)]
+# slot_length_test <- block_appt_merged %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, Department, Provider, SLOT_BEGIN_TIME, SLOT_LENGTH, UNAVAILABLE_RSN_NAME) %>%
+#   mutate(block_combined = paste(unique(comb_block_name), collapse = ", ")) %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, Department, Provider, SLOT_BEGIN_TIME, SLOT_LENGTH, UNAVAILABLE_RSN_NAME, block_combined) %>%
+#   summarise(total = n()) %>%
+#   dplyr::select(-total)
+# 
+# appt_length_test <- block_appt_merged %>%
+#   collect() %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, Department, Provider, SLOT_BEGIN_TIME, PAT_ENC_CSN_ID, APPT_BLOCK_NAME, APPT_PRC_NAME, VISIT_GROUP_NUM, APPT_LENGTH) %>%
+#   summarise(total = n()) %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, Department, Provider, SLOT_BEGIN_TIME) %>%
+#   mutate(total = n()) %>%
+#   filter(!(is.na(PAT_ENC_CSN_ID) & total >1)) %>%
+#   dplyr::select(-total)
+# 
+# merge_test <- merge(slot_length_test, appt_length_test)
+# 
+# # Analyze Booked Rate based on Slot Length -------------------------------------
+# unbooked_slots <- merge_test %>%
+#   filter(is.na(UNAVAILABLE_RSN_NAME)) %>%
+#   filter(is.na(PAT_ENC_CSN_ID)) %>%
+#   mutate(Slot.DateYear = as.Date(SLOT_BEGIN_TIME, "%Y-%m-%d")) %>%
+#   group_by(DEPARTMENT_ID, Department, PROV_ID, Provider, Slot.DateYear, SLOT_LENGTH) %>%
+#   summarise(total = n()) %>%
+#   pivot_wider(names_from = SLOT_LENGTH,
+#               values_from = total,
+#               values_fill = 0)
 
 ```
 
