@@ -352,18 +352,18 @@ report_run_date <- Sys.Date()
 
 ```{r Block Openings Analysis, echo = FALSE, warning = FALSE, message = FALSE}
 
-block_openigns <- block_raw_tbl %>%
-  left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME), 
-            by = c("BLOCK_C" = "APPT_BLOCK_C")) %>%
-  filter(DEPARTMENT_ID == 8827017) %>%
-  mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
-         Slot.Year = year(SLOT_BEGIN_TIME),
-         Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-  filter(Slot.DateYear >= as.Date("2023-07-01")) %>%
-  collect()
-
-block_openigns <- block_openigns %>%
-  left_join(prov_mapping) 
+# block_openigns <- block_raw_tbl %>%
+#   left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME), 
+#             by = c("BLOCK_C" = "APPT_BLOCK_C")) %>%
+#   filter(DEPARTMENT_ID == 8827017) %>%
+#   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
+#          Slot.Year = year(SLOT_BEGIN_TIME),
+#          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
+#   filter(Slot.DateYear >= as.Date("2023-07-01")) %>%
+#   collect()
+# 
+# block_openigns <- block_openigns %>%
+#   left_join(prov_mapping) 
 
 
 
