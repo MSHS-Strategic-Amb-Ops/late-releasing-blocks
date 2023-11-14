@@ -497,13 +497,13 @@ blocks_combined <- late_block_raw %>%
   ungroup() %>%
   arrange(DEPARTMENT_ID, SLOT_BEGIN_TIME, comb_block_name) %>%
   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, Slot.DateYear, comb_block_name) %>%
-  summarise(total_blocks = n()) %>%
+  summarise(total_blocks = n()) 
   # For Test Run
-  filter(DEPARTMENT_ID == 8827017) %>%
-  mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
-         Slot.Year = year(SLOT_BEGIN_TIME),
-         Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-  filter(Slot.DateYear >= as.Date("2023-07-01"))
+  # filter(DEPARTMENT_ID == 8827017) %>%
+  # mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
+  #        Slot.Year = year(SLOT_BEGIN_TIME),
+  #        Slot.Month = month(SLOT_BEGIN_TIME)) %>%
+  # filter(Slot.DateYear >= as.Date("2023-07-01"))
 
 
 ## Count of Block Combination Usage --------------------------------------------
