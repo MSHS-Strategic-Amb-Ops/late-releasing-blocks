@@ -2,11 +2,9 @@
 output:
   html_document
 ---
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```
-
 <style type="text/css">
 div.main-container {
   max-width: 2000px;
@@ -14,7 +12,6 @@ div.main-container {
   margin-right: auto;
 }
 </style>
-
 <style>
 .tocify {
 color: black;
@@ -40,14 +37,11 @@ font-weight: bold;
 <!--  border: none; -->
 <!-- } -->
 </style>
-
-
 <style>
   .nav-pills>li>a:hover, .nav-pills>li>a:focus, .nav-pills>li.active>a,     .nav-pills>li.active>a:hover, .nav-pills>li.active>a:focus{
      background-color: #212070;
      }
 </style>
-
 <style>
 .container { width: 1800px; }
 h2 {
@@ -69,7 +63,6 @@ h4 {
   <!-- font-weight: bold; -->
 }
 </style>
-
 <style>
 .blackbox {
   padding: 1em;
@@ -86,20 +79,15 @@ h4 {
   margin: 0px auto;
 }
 </style>
-
-
 <!-- ```{css toc-content, echo = FALSE} -->
 <!-- #TOC { -->
 <!--   right: 270px; -->
 <!--   margin: 20px 0px 25px 0px; -->
 <!-- } -->
-
 <!-- .main-container { -->
 <!--     margin-left: 200px; -->
 <!-- } -->
 <!-- ``` -->
-
-
 ```{r Load Packages, echo = FALSE, warning = FALSE, message = FALSE}
 # # Load packages -----------------------------------------------------------------------------------
 suppressMessages({
@@ -196,7 +184,6 @@ suppressMessages({
   library(pool)
   library(emojifont)
 })
-
 ```
 
 
@@ -289,22 +276,17 @@ scale_fill_MountSinai <- function(palette = "all", discrete = TRUE, reverse = FA
 
 
 ```{r Global Variables, echo = FALSE, warning = FALSE, message = FALSE}
-
 '%!in%' <- function(x,y)!('%in%'(x,y))
-
 ```
 
 
 ```{r Connect to Tables, echo = FALSE, warning = FALSE, message = FALSE}
-
 # Connection to Oracle DB ------------------------------------------------------
 conn1 <- dbPool(drv = odbc(), dsn = "OAO Cloud DB SoYoun", timeout = 30)
 conn2 <- dbConnect(odbc(), 
                   "Clarity_prod", 
                   uid = "kweons01" , 
                   pwd = "kweons01123$")
-
-
 # Import Slot Availability Data ------------------------------------------------
 slot_raw_tbl <- tbl(conn2, "Y_DM_BOOKED_FILLED_RATE")
 access_raw_tbl <- tbl(conn2, "MV_DM_PATIENT_ACCESS")
@@ -314,84 +296,31 @@ block_name_tbl <- tbl(conn2, "ZC_APPT_BLOCK")
 orders_raw_tbl <- tbl(conn2, "ORDER_PROC")
 coverage_tbl <- tbl(conn2, "V_PAT_ENC_COVERAGE")
 template_tbl <- tbl(conn2, "TEMPLATE")
-
 ```
 
 
 ```{r Report Variables, echo = FALSE, warning = FALSE, message = FALSE}
-
 report_run_date <- Sys.Date()
-
-
-# neuro <- block_raw_tbl %>%
-#   filter(DEPARTMENT_ID == 8811010) %>%
-#   filter(PROV_ID == "94") %>%
-#   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
-#          Slot.Year = year(SLOT_BEGIN_TIME),
-#          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-#   filter(Slot.DateYear >= as.Date("2023-01-01")) %>%
-#   collect()
-# 
-# avail_neuro <- availability_raw_tbl %>%
-#   filter(DEPARTMENT_ID == 8811010) %>%
-#   filter(PROV_ID == "94") %>%
-#   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
-#          Slot.Year = year(SLOT_BEGIN_TIME),
-#          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-#   filter(Slot.DateYear >= as.Date("2023-11-01")) %>%
-#   collect()
-# 
-# access_neuro <- access_raw_tbl %>%
-#   filter(DEPARTMENT_ID == 8811010) %>%
-#   mutate(Appt.DateYear = TO_DATE(CONTACT_DATE)) %>%
-#   filter(Appt.DateYear >= as.Date("2023-11-01")) %>%
-#   collect()
-
-```
-
-
-```{r Block Openings Analysis, echo = FALSE, warning = FALSE, message = FALSE}
-
-# block_openigns <- block_raw_tbl %>%
-#   left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME), 
-#             by = c("BLOCK_C" = "APPT_BLOCK_C")) %>%
-#   filter(DEPARTMENT_ID == 8827017) %>%
-#   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
-#          Slot.Year = year(SLOT_BEGIN_TIME),
-#          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-#   filter(Slot.DateYear >= as.Date("2023-07-01")) %>%
-#   collect()
-# 
-# block_openigns <- block_openigns %>%
-#   left_join(prov_mapping) 
-
-
-
 ```
 
 
 ```{r Department and Provider Mapping, echo = FALSE, warning = FALSE, message = FALSE}
-
 # Department and Provider Mapping ----------------------------------------------
 dept_mapping <- access_raw_tbl %>%
   group_by(SITE, DEPARTMENT_ID, DEPARTMENT_NAME, DEPT_SPECIALTY_NAME) %>%
   summarise(total = n()) %>%
   collect() %>%
   dplyr::select(-total)
-
 prov_mapping <- access_raw_tbl %>%
   group_by(PROV_ID, PROV_NAME_WID) %>%
   summarise(total = n()) %>%
   collect() %>%
   dplyr::select(-total)
-
 prov_mapping$PROV_NAME <- trimws(gsub("\\[.*?\\]", "", prov_mapping$PROV_NAME_WID))
-
 ```
 
 
 ```{r New Patient Blocks, echo = FALSE, warning = FALSE, message = FALSE}
-
 new_blocks <- c(
   "GMA New Pt",
   "Endo New Patient",
@@ -453,7 +382,6 @@ new_blocks <- c(
   "NEW GYN 21-DAY",
   "NEW GYN 28-DAY"
 )
-
 release_blocks <- c(
   "New Patient 14-Day",
   "New Patient 21-Day",
@@ -464,18 +392,17 @@ release_blocks <- c(
   "NEW GYN 21-DAY",
   "NEW GYN 28-DAY"
 )
-
 ```
 
 
 ```{r Late Releasing Slots, echo = FALSE, warning = FALSE, message = FALSE}
-
 # Slot Block Data --------------------------------------------------------------
 late_block_raw <- block_raw_tbl %>%
   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
          Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-  filter(Slot.DateYear >= as.Date("2023-06-01")) %>%
+    # filter(Slot.DateYear >= as.Date("2023-10-01")) %>%
+  filter(Slot.DateYear >= as.Date("2023-11-01")) %>%
   # filter(Slot.Year == 2024) %>%
   # filter(Slot.Month >= 08) %>%
   left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME), 
@@ -485,27 +412,17 @@ late_block_raw <- block_raw_tbl %>%
   rename(block_name = NAME.x,
          org_block_name = NAME.y) %>%
   mutate(comb_block_name = trim(ifelse(is.na(org_block_name), block_name, org_block_name))) 
-
 ```
 
 
 ```{r Block Usage Audit, echo = FALSE, warning = FALSE, message = FALSE}
-
 # Block combinations by time slot ----------------------------------------------
 ## Shows all blocks associated to each time slot -------------------------------
 blocks_combined <- late_block_raw %>%
   ungroup() %>%
   arrange(DEPARTMENT_ID, SLOT_BEGIN_TIME, comb_block_name) %>%
   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, Slot.DateYear, comb_block_name) %>%
-  summarise(total_blocks = n()) 
-  # For Test Run
-  # filter(DEPARTMENT_ID == 8827017) %>%
-  # mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
-  #        Slot.Year = year(SLOT_BEGIN_TIME),
-  #        Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-  # filter(Slot.DateYear >= as.Date("2023-07-01"))
-
-
+  summarise(total_blocks = n())
 ## Count of Block Combination Usage --------------------------------------------
 block_combination_usage <- blocks_combined %>%
   collect() %>%
@@ -521,69 +438,10 @@ block_combination_usage <- blocks_combined %>%
 block_combination_usage$Site <- dept_mapping$SITE[match(block_combination_usage$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 block_combination_usage$Department <- dept_mapping$DEPARTMENT_NAME[match(block_combination_usage$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 block_combination_usage$Provider <- prov_mapping$PROV_NAME[match(block_combination_usage$PROV_ID, prov_mapping$PROV_ID)]
-
 ```
-
-
-```{r}
-
-# slot_data <- availability_raw_tbl %>%
-#   filter(DEPARTMENT_ID == 8827017) %>%
-#   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
-#          Slot.Year = year(SLOT_BEGIN_TIME),
-#          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-#   filter(Slot.DateYear >= as.Date("2023-07-01")) %>%
-#   collect() 
-# 
-# 
-# late_block_raw_check <- late_block_raw %>%
-#   filter(DEPARTMENT_ID == 8827017) %>%
-#   collect()
-# 
-# # Block combinations by time slot ----------------------------------------------
-# ## Shows all blocks associated to each time slot -------------------------------
-# blocks_combined <- late_block_raw %>%
-#   left_join(availability_raw_tbl %>% 
-#               dplyr::select(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, ORG_REG_OPENINGS, ORG_OVBK_OPENINGS)) %>%
-#     # For Test Run
-#   filter(DEPARTMENT_ID == 8827017) %>%
-#   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
-#          Slot.Year = year(SLOT_BEGIN_TIME),
-#          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-#   filter(Slot.DateYear >= as.Date("2023-07-01")) %>%
-#   collect() %>%
-#   ungroup() %>%
-#   arrange(DEPARTMENT_ID, SLOT_BEGIN_TIME, comb_block_name) %>%
-#   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, Slot.DateYear, comb_block_name) %>%
-#   summarise(total_blocks = n(),
-#             openings = max(ORG_AVAIL_BLOCKS)) 
-# 
-# 
-# 
-# ## Count of Block Combination Usage --------------------------------------------
-# block_combination_usage <- blocks_combined %>%
-#   collect() %>%
-#   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME) %>%
-#   mutate(block_combination = paste0(unique(comb_block_name), collapse = ', ')) %>%
-#   mutate(total_blocks = length(unique(comb_block_name))) %>%
-#   group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, block_combination, total_blocks) %>%
-#   summarise(total_slots = length(unique(SLOT_BEGIN_TIME))) %>%
-#   mutate(slot_incorrect = case_when(total_blocks >1 & str_detect(block_combination, str_c(release_blocks, collapse = "|")) ~ "Yes",
-#                                     TRUE ~ "No"))
-#   
-#   
-# block_combination_usage$Site <- dept_mapping$SITE[match(block_combination_usage$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
-# block_combination_usage$Department <- dept_mapping$DEPARTMENT_NAME[match(block_combination_usage$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
-# block_combination_usage$Provider <- prov_mapping$PROV_NAME[match(block_combination_usage$PROV_ID, prov_mapping$PROV_ID)]
-# 
-
-
-```
-
 
 
 ```{r Time Release Block Conversion, echo = FALSE, warning = FALSE, message = FALSE}
-
 # Categorize slots by non-new vs. new vs. new time-relese 
 blocks_combined_type <- blocks_combined %>%
   mutate(new_block = case_when(comb_block_name %in% new_blocks ~ "NEW_BLOCK",
@@ -597,14 +455,10 @@ blocks_combined_type <- blocks_combined %>%
   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME,  block_combination, new_block, release_block) %>%
   summarise(total = n()) %>%
   mutate(Slot.YearMonth = format(as.Date(SLOT_BEGIN_TIME),"%Y-%m"))
-
-
 blocks_combined_type$Site <- dept_mapping$SITE[match(blocks_combined_type$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 blocks_combined_type$Specialty <- dept_mapping$DEPT_SPECIALTY_NAME[match(blocks_combined_type$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 blocks_combined_type$Department <- dept_mapping$DEPARTMENT_NAME[match(blocks_combined_type$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 blocks_combined_type$Provider <- prov_mapping$PROV_NAME[match(blocks_combined_type$PROV_ID, prov_mapping$PROV_ID)]
-
-
 # Summary of slot type by month   
 new_block_conversion <- blocks_combined_type %>%
   pivot_wider(names_from = c("new_block","release_block"),
@@ -631,8 +485,6 @@ new_block_conversion <- blocks_combined_type %>%
          incorrect_new_block_perc = round(incorrect_new_block/NEW_BLOCK_NON_TIME_RELEASE,2),
          incorrect_time_release_perc = round(incorrect_time_release_block/NEW_BLOCK_TIME_RELEASE,2)) %>%
   arrange(Site, Department, Provider)
-
-
 order <- c("Site","Department","Specialty","DEPARTMENT_ID","Provider","Slot.YearMonth",
            "TOTAL_BLOCKS","TOTAL_NEW_BLOCKS",
            "NON_NEW_BLOCK_NON_TIME_RELEASE","NEW_BLOCK_NON_TIME_RELEASE","NEW_BLOCK_TIME_RELEASE",
@@ -640,17 +492,13 @@ order <- c("Site","Department","Specialty","DEPARTMENT_ID","Provider","Slot.Year
            "correct_time_release_block", "incorrect_time_release_block",
            "incorrect_new_block_perc", "incorrect_time_release_perc",
            "NEW_BLOCK_PERC", "NEW_BLOCK_TIME_RELEASE_PERC")
-
 new_block_conversion <- new_block_conversion[order]
-
 new_block_conversion$NEW_BLOCK_PERC[is.nan(new_block_conversion$NEW_BLOCK_PERC)]<-NA
 new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC[is.nan(new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC)]<-NA
-
 ```
 
 
 ```{r Time Release of Block Duration vs. Appt Length, echo = FALSE, warning = FALSE, message = FALSE}
-
 # # Merge data for additional slot and appt details
 # block_appt_merged <- late_block_raw %>%
 #   left_join(availability_raw_tbl %>% dplyr::select(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, SLOT_LENGTH,
@@ -707,7 +555,6 @@ new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC[is.nan(new_block_conversion$NEW
 #   pivot_wider(names_from = SLOT_LENGTH,
 #               values_from = total,
 #               values_fill = 0)
-
 ```
 
 
@@ -725,7 +572,6 @@ ________________________________________________________________________________
 
 ## Late-Releasing New Patient Block Conversion
 ```{r Block Conversion Output (block Count), echo = FALSE, warning = FALSE, message = FALSE}
-
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
   tagList(
@@ -733,7 +579,6 @@ htmltools::browsable(
       tagList(fontawesome::fa("download"), "Download Table"),
       onclick = "Reactable.downloadDataCSV('block-conversion', 'Block Conversion')"
     ),
-
 # htmltools::browsable(
 #   tagList(
 #     div(tags$label("Group by", `for` = "cars-grouping-select")),
@@ -747,7 +592,6 @@ htmltools::browsable(
 #     ),
 #
 #     tags$hr("aria-hidden" = "true"),
-
 reactable(
   new_block_conversion %>%
     mutate(Slot.YearMonth = as.character(Slot.YearMonth)),
@@ -770,18 +614,14 @@ reactable(
     # height = 800,
     wrap = TRUE,
   searchable = TRUE,
-
   rowStyle = function(index) {
             if (index %in% c(10)) {
               list(`border-top` = "2px solid rgb(184,184,184)",
                    fontWeight = "Bold")
             }
           },
-
   groupBy = c("Site", "Department", "Specialty", "Provider", "Slot.YearMonth"),
-
   columns = list(
-
     Site = colDef(
       name = "Site",
       minWidth = 180),
@@ -791,14 +631,11 @@ reactable(
     
     Department = colDef(
       minWidth = 200),
-
     Provider = colDef(
       minWidth = 130),
-
     Slot.YearMonth = colDef(
       name = "Year-Month",
       minWidth = 100),
-
     TOTAL_BLOCKS = colDef(
       name = "Total Blocks",
       maxWidth = 100,
@@ -887,7 +724,6 @@ reactable(
       format = colFormat(percent = TRUE, digits = 0),
       style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
     ),
-
     # Specialty = colDef(show =F),
     DEPARTMENT_ID = colDef(show =F),
     NON_NEW_BLOCK_NON_TIME_RELEASE = colDef(show =F),
@@ -897,21 +733,17 @@ reactable(
     incorrect_late_release_block = colDef(show =F),
     incorrect_new_block_perc = colDef(show =F),
     incorrect_time_release_perc = colDef(show =F)
-
   ) # Close Columns
-
   ) # Close Reactable
-
  )
 )
-
 ```
 <br/>
 <br/>
 
+
 ## Late-Releasing New Patient Block Build
 ```{r Block Combination Output (Slot Count), echo = FALSE, warning = FALSE, message = FALSE}
-
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
   tagList(
@@ -919,7 +751,6 @@ htmltools::browsable(
       tagList(fontawesome::fa("download"), "Download Table"),
       onclick = "Reactable.downloadDataCSV('block-type-count', 'Block Type Usage')"
     ),
-
 # htmltools::browsable(
 #   tagList(
 #     div(tags$label("Group by", `for` = "cars-grouping-select")),
@@ -933,7 +764,6 @@ htmltools::browsable(
 #     ),
 # 
 #     tags$hr("aria-hidden" = "true"),
-
 reactable(
   block_combination_usage %>%
     ungroup() %>%
@@ -965,9 +795,7 @@ reactable(
                    fontWeight = "Bold")
             }
           },
-
   groupBy = c("Site", "Department","Provider"),
-
   # columnGroups = list(
   #   # colGroup(name = paste0(format(as.Date(start_date), "%b"),"-",format(as.Date(end_date), "%b %Y"), " Visit Volume"), 
   #   #          columns = c("Total", "new_perc"),
@@ -991,9 +819,7 @@ reactable(
   #            columns = c("noShow_rate_New","noShow_rate_sameDay_New", "noShow_rate_belowFourteen_New","noShow_rate_belowThirty_New", "noShow_rate_overThirty_New"),
   #            headerStyle = list(color = "#00aeef", fontSize = "16px"))
   #   ),
-
   columns = list(
-
     Site = colDef(
       minWidth = 180),
     
@@ -1039,10 +865,7 @@ reactable(
     
     DEPARTMENT_ID = colDef(show=F)
   ) # Close Columns
-
   ) # Close Reactable
-
  )
 )
 ```
-
