@@ -322,6 +322,51 @@ template_tbl <- tbl(conn2, "TEMPLATE")
 
 report_run_date <- Sys.Date()
 
+
+# neuro <- block_raw_tbl %>%
+#   filter(DEPARTMENT_ID == 8811010) %>%
+#   filter(PROV_ID == "94") %>%
+#   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
+#          Slot.Year = year(SLOT_BEGIN_TIME),
+#          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
+#   filter(Slot.DateYear >= as.Date("2023-01-01")) %>%
+#   collect()
+# 
+# avail_neuro <- availability_raw_tbl %>%
+#   filter(DEPARTMENT_ID == 8811010) %>%
+#   filter(PROV_ID == "94") %>%
+#   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
+#          Slot.Year = year(SLOT_BEGIN_TIME),
+#          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
+#   filter(Slot.DateYear >= as.Date("2023-11-01")) %>%
+#   collect()
+# 
+# access_neuro <- access_raw_tbl %>%
+#   filter(DEPARTMENT_ID == 8811010) %>%
+#   mutate(Appt.DateYear = TO_DATE(CONTACT_DATE)) %>%
+#   filter(Appt.DateYear >= as.Date("2023-11-01")) %>%
+#   collect()
+
+```
+
+
+```{r Block Openings Analysis, echo = FALSE, warning = FALSE, message = FALSE}
+
+block_openigns <- block_raw_tbl %>%
+  left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME), 
+            by = c("BLOCK_C" = "APPT_BLOCK_C")) %>%
+  filter(DEPARTMENT_ID == 8827017) %>%
+  mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
+         Slot.Year = year(SLOT_BEGIN_TIME),
+         Slot.Month = month(SLOT_BEGIN_TIME)) %>%
+  filter(Slot.DateYear >= as.Date("2023-07-01")) %>%
+  collect()
+
+block_openigns <- block_openigns %>%
+  left_join(prov_mapping) 
+
+
+
 ```
 
 
@@ -430,7 +475,7 @@ late_block_raw <- block_raw_tbl %>%
   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
          Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-  filter(Slot.DateYear >= as.Date("2023-11-01")) %>%
+  filter(Slot.DateYear >= as.Date("2023-01-01")) %>%
   # filter(Slot.Year == 2024) %>%
   # filter(Slot.Month >= 08) %>%
   left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME), 
@@ -452,7 +497,13 @@ blocks_combined <- late_block_raw %>%
   ungroup() %>%
   arrange(DEPARTMENT_ID, SLOT_BEGIN_TIME, comb_block_name) %>%
   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, Slot.DateYear, comb_block_name) %>%
-  summarise(total_blocks = n())
+  summarise(total_blocks = n()) %>%
+  # For Test Run
+  filter(DEPARTMENT_ID == 8827017) %>%
+  mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
+         Slot.Year = year(SLOT_BEGIN_TIME),
+         Slot.Month = month(SLOT_BEGIN_TIME)) %>%
+  filter(Slot.DateYear >= as.Date("2023-07-01"))
 
 
 ## Count of Block Combination Usage --------------------------------------------
@@ -472,6 +523,63 @@ block_combination_usage$Department <- dept_mapping$DEPARTMENT_NAME[match(block_c
 block_combination_usage$Provider <- prov_mapping$PROV_NAME[match(block_combination_usage$PROV_ID, prov_mapping$PROV_ID)]
 
 ```
+
+
+```{r}
+
+# slot_data <- availability_raw_tbl %>%
+#   filter(DEPARTMENT_ID == 8827017) %>%
+#   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
+#          Slot.Year = year(SLOT_BEGIN_TIME),
+#          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
+#   filter(Slot.DateYear >= as.Date("2023-07-01")) %>%
+#   collect() 
+# 
+# 
+# late_block_raw_check <- late_block_raw %>%
+#   filter(DEPARTMENT_ID == 8827017) %>%
+#   collect()
+# 
+# # Block combinations by time slot ----------------------------------------------
+# ## Shows all blocks associated to each time slot -------------------------------
+# blocks_combined <- late_block_raw %>%
+#   left_join(availability_raw_tbl %>% 
+#               dplyr::select(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, ORG_REG_OPENINGS, ORG_OVBK_OPENINGS)) %>%
+#     # For Test Run
+#   filter(DEPARTMENT_ID == 8827017) %>%
+#   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
+#          Slot.Year = year(SLOT_BEGIN_TIME),
+#          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
+#   filter(Slot.DateYear >= as.Date("2023-07-01")) %>%
+#   collect() %>%
+#   ungroup() %>%
+#   arrange(DEPARTMENT_ID, SLOT_BEGIN_TIME, comb_block_name) %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, Slot.DateYear, comb_block_name) %>%
+#   summarise(total_blocks = n(),
+#             openings = max(ORG_AVAIL_BLOCKS)) 
+# 
+# 
+# 
+# ## Count of Block Combination Usage --------------------------------------------
+# block_combination_usage <- blocks_combined %>%
+#   collect() %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME) %>%
+#   mutate(block_combination = paste0(unique(comb_block_name), collapse = ', ')) %>%
+#   mutate(total_blocks = length(unique(comb_block_name))) %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, block_combination, total_blocks) %>%
+#   summarise(total_slots = length(unique(SLOT_BEGIN_TIME))) %>%
+#   mutate(slot_incorrect = case_when(total_blocks >1 & str_detect(block_combination, str_c(release_blocks, collapse = "|")) ~ "Yes",
+#                                     TRUE ~ "No"))
+#   
+#   
+# block_combination_usage$Site <- dept_mapping$SITE[match(block_combination_usage$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+# block_combination_usage$Department <- dept_mapping$DEPARTMENT_NAME[match(block_combination_usage$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+# block_combination_usage$Provider <- prov_mapping$PROV_NAME[match(block_combination_usage$PROV_ID, prov_mapping$PROV_ID)]
+# 
+
+
+```
+
 
 
 ```{r Time Release Block Conversion, echo = FALSE, warning = FALSE, message = FALSE}
