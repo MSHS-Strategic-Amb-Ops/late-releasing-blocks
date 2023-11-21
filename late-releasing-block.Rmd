@@ -411,33 +411,90 @@ late_block_raw <- block_raw_tbl %>%
             by = c("REL_BLOCK_C" = "APPT_BLOCK_C")) %>%
   rename(block_name = NAME.x,
          org_block_name = NAME.y) %>%
-  mutate(comb_block_name = trim(ifelse(is.na(org_block_name), block_name, org_block_name))) 
+  mutate(comb_block_name = trim(ifelse(is.na(org_block_name), block_name, org_block_name))) %>%
+  left_join(availability_raw_tbl %>% dplyr::select(PROV_ID, DEPARTMENT_ID, SLOT_BEGIN_TIME, ORG_REG_OPENINGS) %>%
+              group_by(PROV_ID, DEPARTMENT_ID, SLOT_BEGIN_TIME, ORG_REG_OPENINGS) %>%
+              summarise(total = n()) %>%
+              dplyr::select(-total),
+            by = c("PROV_ID", "DEPARTMENT_ID", "SLOT_BEGIN_TIME")) 
+
 ```
 
 
 ```{r Block Usage Audit, echo = FALSE, warning = FALSE, message = FALSE}
+# # Block combinations by time slot ----------------------------------------------
+# ## Shows all blocks associated to each time slot -------------------------------
+# blocks_combined <- late_block_raw %>%
+#   collect()
+#   ungroup() %>%
+#   arrange(DEPARTMENT_ID, SLOT_BEGIN_TIME, comb_block_name) %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, Slot.DateYear, comb_block_name) %>%
+#   summarise(total_blocks = n())
+# ## Count of Block Combination Usage --------------------------------------------
+# block_combination_usage <- blocks_combined %>%
+#   collect() %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME) %>%
+#   mutate(block_combination = paste0(unique(comb_block_name), collapse = ', ')) %>%
+#   mutate(total_blocks = length(unique(comb_block_name))) %>%
+#   group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, block_combination, total_blocks) %>%
+#   summarise(total_slots = length(unique(SLOT_BEGIN_TIME))) %>%
+#   mutate(slot_incorrect = case_when(total_blocks >1 & str_detect(block_combination, str_c(release_blocks, collapse = "|")) ~ "Yes",
+#                                     TRUE ~ "No"))
+#   
+#   
+# block_combination_usage$Site <- dept_mapping$SITE[match(block_combination_usage$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+# block_combination_usage$Department <- dept_mapping$DEPARTMENT_NAME[match(block_combination_usage$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+# block_combination_usage$Provider <- prov_mapping$PROV_NAME[match(block_combination_usage$PROV_ID, prov_mapping$PROV_ID)]
+```
+
+
+```{r Block Combination and Openings, echo=FALSE, message=FALSE, warning=FALSE}
 # Block combinations by time slot ----------------------------------------------
 ## Shows all blocks associated to each time slot -------------------------------
 blocks_combined <- late_block_raw %>%
   ungroup() %>%
   arrange(DEPARTMENT_ID, SLOT_BEGIN_TIME, comb_block_name) %>%
-  group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, Slot.DateYear, comb_block_name) %>%
+  group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, Slot.DateYear, LINE, comb_block_name, ORG_AVAIL_BLOCKS, ORG_REG_OPENINGS) %>%
   summarise(total_blocks = n())
-## Count of Block Combination Usage --------------------------------------------
-block_combination_usage <- blocks_combined %>%
+  # filter(PROV_ID == "240337") %>%
+  # filter(DEPARTMENT_ID == 8827017) %>%
+  
+
+
+block_openings <- blocks_combined %>%
+  mutate(block_type = case_when(comb_block_name %in% release_blocks ~ "release",
+                                comb_block_name %in% new_blocks ~ "new",
+                                TRUE ~ "non-new")) %>%
   collect() %>%
   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME) %>%
   mutate(block_combination = paste0(unique(comb_block_name), collapse = ', ')) %>%
-  mutate(total_blocks = length(unique(comb_block_name))) %>%
-  group_by(DEPARTMENT_ID, PROV_ID, Slot.DateYear, block_combination, total_blocks) %>%
-  summarise(total_slots = length(unique(SLOT_BEGIN_TIME))) %>%
-  mutate(slot_incorrect = case_when(total_blocks >1 & str_detect(block_combination, str_c(release_blocks, collapse = "|")) ~ "Yes",
-                                    TRUE ~ "No"))
-  
-  
-block_combination_usage$Site <- dept_mapping$SITE[match(block_combination_usage$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
-block_combination_usage$Department <- dept_mapping$DEPARTMENT_NAME[match(block_combination_usage$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
-block_combination_usage$Provider <- prov_mapping$PROV_NAME[match(block_combination_usage$PROV_ID, prov_mapping$PROV_ID)]
+  group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, Slot.DateYear, ORG_REG_OPENINGS, block_combination, block_type) %>%
+  summarise(openings = sum(ORG_AVAIL_BLOCKS),
+            blocks = n()) %>%
+  pivot_wider(names_from = block_type,
+              values_from = openings:blocks) %>%
+  mutate(total_slot = 1,
+         incorrect_slot_reason = case_when(blocks_release >= 1 & `blocks_non-new` >= 1 & ORG_REG_OPENINGS - `openings_non-new` < 1 ~ "Late-Releasing Combination with No Openings",
+                                           `blocks_non-new` >= 1 & blocks_new >= 1 & ORG_REG_OPENINGS - `openings_non-new` < 1 ~ "New Combination with No Openings",
+                                           TRUE ~ "")) %>%
+  mutate(incorrect_slot = ifelse(incorrect_slot_reason == "", 0, 1)) %>%
+  filter(incorrect_slot == 1)
+
+block_openings <- block_openings %>%
+  mutate(Slot.YearMonth = format(as.Date(SLOT_BEGIN_TIME),"%Y-%m"))
+
+block_openings <- block_openings %>%
+  mutate(incorrect_perc = round(incorrect_slot/total_slot,2))
+
+block_openings$openings_new[is.na(block_openings$openings_new)] <- 0
+block_openings$`openings_non-new`[is.na(block_openings$`openings_non-new`)] <- 0
+block_openings$openings_release[is.na(block_openings$openings_release)] <- 0
+
+
+block_openings$Site <- dept_mapping$SITE[match(block_openings$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+block_openings$Specialty <- dept_mapping$DEPT_SPECIALTY_NAME[match(block_openings$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+block_openings$Department <- dept_mapping$DEPARTMENT_NAME[match(block_openings$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
+block_openings$Provider <- prov_mapping$PROV_NAME[match(block_openings$PROV_ID, prov_mapping$PROV_ID)]
 ```
 
 
@@ -742,14 +799,14 @@ reactable(
 <br/>
 
 
-## Late-Releasing New Patient Block Build
-```{r Block Combination Output (Slot Count), echo = FALSE, warning = FALSE, message = FALSE}
+## Late-Releasing New Patient Block Openings
+```{r Block Build and Openings Output, echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
   tagList(
     tags$button(
       tagList(fontawesome::fa("download"), "Download Table"),
-      onclick = "Reactable.downloadDataCSV('block-type-count', 'Block Type Usage')"
+      onclick = "Reactable.downloadDataCSV('block-build-openings', 'Block Build and Openings')"
     ),
 # htmltools::browsable(
 #   tagList(
@@ -762,14 +819,13 @@ htmltools::browsable(
 #       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
 #       lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
 #     ),
-# 
+#
 #     tags$hr("aria-hidden" = "true"),
 reactable(
-  block_combination_usage %>%
-    ungroup() %>%
-    dplyr::select(-c(total_blocks,DEPARTMENT_ID, PROV_ID)) %>%
-    mutate(Slot.DateYear = as.character(Slot.DateYear)),
-  elementId = "block-type-count",
+  block_openings %>%
+    mutate(Slot.YearMonth = as.character(Slot.YearMonth),
+           SLOT_BEGIN_TIME = as.character(SLOT_BEGIN_TIME)),
+  elementId = "block-build-openings",
   # elementId = "cars-grouping-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
@@ -785,87 +841,243 @@ reactable(
     highlight = TRUE,
     # filterable = TRUE,
     pagination = FALSE,
-    height = 800,
+    # height = 800,
     wrap = TRUE,
   searchable = TRUE,
-  
   rowStyle = function(index) {
             if (index %in% c(10)) {
               list(`border-top` = "2px solid rgb(184,184,184)",
                    fontWeight = "Bold")
             }
           },
-  groupBy = c("Site", "Department","Provider"),
-  # columnGroups = list(
-  #   # colGroup(name = paste0(format(as.Date(start_date), "%b"),"-",format(as.Date(end_date), "%b %Y"), " Visit Volume"), 
-  #   #          columns = c("Total", "new_perc"),
-  #   #          headerStyle = list(color = "#212070", fontSize = "16px")),
-  #   # colGroup(name = paste0(format(as.Date(start_date), "%b"),"-",format(as.Date(end_date), "%b %Y"), " No Show Rate"), 
-  #   #          columns = c("noShow_rate", "noShow_rate_Established", "noShow_rate_New"),
-  #   #          headerStyle = list(color = "#d80b8c", fontSize = "16px"))
-  #   colGroup(name = "", 
-  #            columns = c("Campus","Campus.Specialty.Group"), sticky = "left", 
-  #            headerStyle = list(fontSize = "16px")),
-  #   colGroup(name = paste0(current_year, " YTD Visit Volume"), 
-  #            columns = c("Arrived","arrived_perc","new_perc"),
-  #            headerStyle = list(color = "#212070", fontSize = "16px")),
-  #   colGroup(name = "No Show Plus Rate - All", 
-  #            columns = c("noShow_rate", "noShow_rate_sameDay", "noShow_rate_belowFourteen", "noShow_rate_belowThirty", "noShow_rate_overThirty"),
-  #            headerStyle = list(color = "#7f7f7f", fontSize = "16px")),
-  #   colGroup(name = "No Show Plus Rate - Established", 
-  #            columns = c("noShow_rate_Established", "noShow_rate_sameDay_Established", "noShow_rate_belowFourteen_Established", "noShow_rate_belowThirty_Established", "noShow_rate_overThirty_Established"),
-  #            headerStyle = list(color = "#d80b8c", fontSize = "16px")),
-  #   colGroup(name = "No Show Plus Rate - New", 
-  #            columns = c("noShow_rate_New","noShow_rate_sameDay_New", "noShow_rate_belowFourteen_New","noShow_rate_belowThirty_New", "noShow_rate_overThirty_New"),
-  #            headerStyle = list(color = "#00aeef", fontSize = "16px"))
-  #   ),
+  groupBy = c("Site", "Slot.YearMonth", "Department", "Provider"),
   columns = list(
     Site = colDef(
-      minWidth = 180),
+      name = "Site",
+      minWidth = 160),
+    
+    # Specialty = colDef(
+    #   minWidth = 200),
     
     Department = colDef(
       minWidth = 200),
     
     Provider = colDef(
-      minWidth = 130),
+      minWidth = 150),
     
-    Slot.DateYear = colDef(
-      name = "Date",
+    Slot.YearMonth = colDef(
+      name = "Year-Month",
       minWidth = 100),
     
-    # Slot.Year = colDef(
-    #   name = "Year",
-    #   minWidth = 100),
-    # 
-    # Slot.Month = colDef(
-    #   name = "Month",
-    #   minWidth = 100),
-    
-    # Slot.DateYear = colDef(
-    #   name = "Date",
-    #   minWidth = 100),
-    
-    block_combination = colDef(
-      name = "Block Combination",
-      minWidth = 200),
-    
-    total_slots = colDef(
-      name = "Total Slots",
-      maxWidth = 100,
+    incorrect_slot = colDef(
+      name = "Incorrectly Build Slots",
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = 'sum',
       format = colFormat(separators = TRUE, digits = 0),
-      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
-    ),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)"),
+      minWidth = 90),
     
-    slot_incorrect = colDef(
-      name = "Slot Incorrectly Built (Y/N)",
-      minWidth = 100,
-      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    # incorrect_perc = colDef(
+    #   name = "% of Incorrectly Builid Slots",
+    #   maxWidth = 150,
+    #  headerStyle = list(background = "#a5a7a5", color = "white", fontWeight = "Bold", fontSize = "14px"),
+    #   aggregate = JS("function(values, rows) {
+    #     let totaltotal_slot = 0
+    #     let totalincorrect_slot = 0
+    #     rows.forEach(function(row) {
+    #       totaltotal_slot += row['total_slot']
+    #       totalincorrect_slot += row['incorrect_slot']
+    #     })
+    #     return (totalincorrect_slot) / totaltotal_slot || '-'
+    #   }"),
+    #   format = colFormat(percent = TRUE, digits = 0),
+    #   style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    # ),
     
-    DEPARTMENT_ID = colDef(show=F)
+    SLOT_BEGIN_TIME = colDef(
+      name = "Slot Time",
+      minWidth = 130),
+    
+    ORG_REG_OPENINGS = colDef(
+      name = "Total Openings",
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)"),
+      minWidth = 90),
+    
+    block_combination = colDef(
+      name = "Blocks Assigned",
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)"),
+      minWidth = 150),
+    
+    `openings_non-new` = colDef(
+      name = "Non-New Block Openings",
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)"),
+      minWidth = 90),
+    
+    openings_new = colDef(
+      name = "New Block Openings",
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)"),
+      minWidth = 90),
+    
+    openings_release = colDef(
+      name = "Late-Releasing Block Openings",
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)"),
+      minWidth = 90),
+    
+    incorrect_slot_reason = colDef(
+      name = "Incorrect Block Build Reason",
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)"),
+      minWidth = 150),
+
+    `blocks_non-new` = colDef(show =F),
+    blocks_release = colDef(show =F),
+    blocks_new = colDef(show =F),
+    total_slot = colDef(show =F),
+    incorrect_perc = colDef(show =F),
+    DEPARTMENT_ID = colDef(show =F),
+    PROV_ID = colDef(show =F),
+    Specialty = colDef(show =F),
+    Slot.DateYear = colDef(show =F)
+    
   ) # Close Columns
   ) # Close Reactable
  )
 )
 ```
+<br/>
+<br/>
+
+
+
+<!-- ## Late-Releasing New Patient Block Build -->
+<!-- ```{r Block Combination Output (Slot Count), echo = FALSE, warning = FALSE, message = FALSE} -->
+<!-- # Table Output ----------------------------------------------------------------- -->
+<!-- htmltools::browsable( -->
+<!--   tagList( -->
+<!--     tags$button( -->
+<!--       tagList(fontawesome::fa("download"), "Download Table"), -->
+<!--       onclick = "Reactable.downloadDataCSV('block-type-count', 'Block Type Usage')" -->
+<!--     ), -->
+<!-- # htmltools::browsable( -->
+<!-- #   tagList( -->
+<!-- #     div(tags$label("Group by", `for` = "cars-grouping-select")), -->
+<!-- #     tags$select( -->
+<!-- #       id = "cars-grouping-select", -->
+<!-- #       onchange = "Reactable.setGroupBy('cars-grouping-table', this.value ? [this.value] : [])", -->
+<!-- #       tags$option("None", value = c("Campus","Campus.Specialty.Group")), -->
+<!-- #       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")), -->
+<!-- #       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option) -->
+<!-- #       lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option) -->
+<!-- #     ), -->
+<!-- #  -->
+<!-- #     tags$hr("aria-hidden" = "true"), -->
+<!-- reactable( -->
+<!--   block_combination_usage %>% -->
+<!--     ungroup() %>% -->
+<!--     dplyr::select(-c(total_blocks,DEPARTMENT_ID, PROV_ID)) %>% -->
+<!--     mutate(Slot.DateYear = as.character(Slot.DateYear)), -->
+<!--   elementId = "block-type-count", -->
+<!--   # elementId = "cars-grouping-table", -->
+<!--   style = list(fontFamily = 'Calibri', -->
+<!--                  fontSize = '14px'), -->
+<!--     defaultColDef = colDef(align = "left", -->
+<!--                            headerStyle = list(fontWeight = "Bold", fontSize = "14px"), -->
+<!--                            headerClass = "bar-sort-header"), -->
+<!--   # RowStyle = function(index) { -->
+<!--   #           if (index %in% c(nrow(referral_vol_site_data_mshs))) { -->
+<!--   #             list(`border-top` = "2px solid rgb(184,184,184)", -->
+<!--   #                  fontWeight = "Bold") -->
+<!--   #           } -->
+<!--   #         }, -->
+<!--     highlight = TRUE, -->
+<!--     # filterable = TRUE, -->
+<!--     pagination = FALSE, -->
+<!--     height = 800, -->
+<!--     wrap = TRUE, -->
+<!--   searchable = TRUE, -->
+
+<!--   rowStyle = function(index) { -->
+<!--             if (index %in% c(10)) { -->
+<!--               list(`border-top` = "2px solid rgb(184,184,184)", -->
+<!--                    fontWeight = "Bold") -->
+<!--             } -->
+<!--           }, -->
+<!--   groupBy = c("Site", "Department","Provider"), -->
+<!--   # columnGroups = list( -->
+<!--   #   # colGroup(name = paste0(format(as.Date(start_date), "%b"),"-",format(as.Date(end_date), "%b %Y"), " Visit Volume"),  -->
+<!--   #   #          columns = c("Total", "new_perc"), -->
+<!--   #   #          headerStyle = list(color = "#212070", fontSize = "16px")), -->
+<!--   #   # colGroup(name = paste0(format(as.Date(start_date), "%b"),"-",format(as.Date(end_date), "%b %Y"), " No Show Rate"),  -->
+<!--   #   #          columns = c("noShow_rate", "noShow_rate_Established", "noShow_rate_New"), -->
+<!--   #   #          headerStyle = list(color = "#d80b8c", fontSize = "16px")) -->
+<!--   #   colGroup(name = "",  -->
+<!--   #            columns = c("Campus","Campus.Specialty.Group"), sticky = "left",  -->
+<!--   #            headerStyle = list(fontSize = "16px")), -->
+<!--   #   colGroup(name = paste0(current_year, " YTD Visit Volume"),  -->
+<!--   #            columns = c("Arrived","arrived_perc","new_perc"), -->
+<!--   #            headerStyle = list(color = "#212070", fontSize = "16px")), -->
+<!--   #   colGroup(name = "No Show Plus Rate - All",  -->
+<!--   #            columns = c("noShow_rate", "noShow_rate_sameDay", "noShow_rate_belowFourteen", "noShow_rate_belowThirty", "noShow_rate_overThirty"), -->
+<!--   #            headerStyle = list(color = "#7f7f7f", fontSize = "16px")), -->
+<!--   #   colGroup(name = "No Show Plus Rate - Established",  -->
+<!--   #            columns = c("noShow_rate_Established", "noShow_rate_sameDay_Established", "noShow_rate_belowFourteen_Established", "noShow_rate_belowThirty_Established", "noShow_rate_overThirty_Established"), -->
+<!--   #            headerStyle = list(color = "#d80b8c", fontSize = "16px")), -->
+<!--   #   colGroup(name = "No Show Plus Rate - New",  -->
+<!--   #            columns = c("noShow_rate_New","noShow_rate_sameDay_New", "noShow_rate_belowFourteen_New","noShow_rate_belowThirty_New", "noShow_rate_overThirty_New"), -->
+<!--   #            headerStyle = list(color = "#00aeef", fontSize = "16px")) -->
+<!--   #   ), -->
+<!--   columns = list( -->
+<!--     Site = colDef( -->
+<!--       minWidth = 180), -->
+
+<!--     Department = colDef( -->
+<!--       minWidth = 200), -->
+
+<!--     Provider = colDef( -->
+<!--       minWidth = 130), -->
+
+<!--     Slot.DateYear = colDef( -->
+<!--       name = "Date", -->
+<!--       minWidth = 100), -->
+
+<!--     # Slot.Year = colDef( -->
+<!--     #   name = "Year", -->
+<!--     #   minWidth = 100), -->
+<!--     #  -->
+<!--     # Slot.Month = colDef( -->
+<!--     #   name = "Month", -->
+<!--     #   minWidth = 100), -->
+
+<!--     # Slot.DateYear = colDef( -->
+<!--     #   name = "Date", -->
+<!--     #   minWidth = 100), -->
+
+<!--     block_combination = colDef( -->
+<!--       name = "Block Combination", -->
+<!--       minWidth = 200), -->
+
+<!--     total_slots = colDef( -->
+<!--       name = "Total Slots", -->
+<!--       maxWidth = 100, -->
+<!--       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"), -->
+<!--       aggregate = 'sum', -->
+<!--       format = colFormat(separators = TRUE, digits = 0), -->
+<!--       style = list(borderLeft = "1.5px solid rgb(230, 230, 230)") -->
+<!--     ), -->
+
+<!--     slot_incorrect = colDef( -->
+<!--       name = "Slot Incorrectly Built (Y/N)", -->
+<!--       minWidth = 100, -->
+<!--       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px")), -->
+
+<!--     DEPARTMENT_ID = colDef(show=F) -->
+<!--   ) # Close Columns -->
+<!--   ) # Close Reactable -->
+<!--  ) -->
+<!-- ) -->
+<!-- ``` -->
