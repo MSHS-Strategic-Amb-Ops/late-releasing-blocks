@@ -456,11 +456,9 @@ blocks_combined <- late_block_raw %>%
   arrange(DEPARTMENT_ID, SLOT_BEGIN_TIME, comb_block_name) %>%
   group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, Slot.DateYear, LINE, comb_block_name, ORG_AVAIL_BLOCKS, ORG_REG_OPENINGS) %>%
   summarise(total_blocks = n())
-  # filter(PROV_ID == "240337") %>%
-  # filter(DEPARTMENT_ID == 8827017) %>%
   
 
-
+# Identify slots with incorrect block & openings build -------------------------
 block_openings <- blocks_combined %>%
   mutate(block_type = case_when(comb_block_name %in% release_blocks ~ "release",
                                 comb_block_name %in% new_blocks ~ "new",
@@ -472,30 +470,58 @@ block_openings <- blocks_combined %>%
   summarise(openings = sum(ORG_AVAIL_BLOCKS),
             blocks = n()) %>%
   pivot_wider(names_from = block_type,
-              values_from = openings:blocks) %>%
-  mutate(total_slot = 1,
-         incorrect_slot_reason = case_when(blocks_release >= 1 & `blocks_non-new` >= 1 & ORG_REG_OPENINGS - `openings_non-new` < 1 ~ "Late-Releasing Combination with No Openings",
-                                           `blocks_non-new` >= 1 & blocks_new >= 1 & ORG_REG_OPENINGS - `openings_non-new` < 1 ~ "New Combination with No Openings",
-                                           TRUE ~ "")) %>%
+              values_from = openings:blocks)
+
+block_openings <- block_openings %>%
+  mutate(total_openings = sum(`openings_non-new`, openings_new, openings_release, na.rm =  T),
+         openings_not_release = sum(`openings_non-new`, openings_new, na.rm = T),
+         blocks_not_release = sum(`blocks_non-new`, blocks_new, na.rm = T))
+  
+block_openings <- block_openings %>%
+  mutate(combination_new = case_when(blocks_new >= 1 & `blocks_non-new` >= 1 ~ 1,
+                                    blocks_new >= 1 & blocks_release >= 1 ~ 1,
+                                    TRUE ~ 0))
+
+block_openings <- block_openings %>%
+  mutate(combination_release = case_when(blocks_release >= 1 & `blocks_non-new` >= 1 ~ 1,
+                                    blocks_release >= 1 & blocks_new >= 1 ~ 1,
+                                    TRUE ~ 0)) 
+
+block_openings <- block_openings %>%
+  filter(combination_new == 1 | combination_release == 1)
+
+block_openings <- block_openings %>%
+  mutate(incorrect_slot_reason = case_when(blocks_release >= 1 & is.na(total_openings)  ~ "Late-Releasing Combination with No Openings", # Combination with no openings at all 
+                                           blocks_release >= 1 & is.na(openings_release) ~ "Late-Releasing Combination with No Openings",
+                                           blocks_release >= 1 & ORG_REG_OPENINGS - openings_not_release < 1 ~ "Late-Releasing Combination with No Openings",
+                                           blocks_new >= 1 & is.na(openings_new) ~ "New Combination with No Openings",
+                                           blocks_new >= 1 & ORG_REG_OPENINGS - `openings_non-new` < 1 ~ "New Combination with No Openings",
+                                           TRUE ~ "")) 
+
+block_openings <- block_openings %>%
   mutate(incorrect_slot = ifelse(incorrect_slot_reason == "", 0, 1)) %>%
-  filter(incorrect_slot == 1)
+  filter(incorrect_slot == 1) %>%
+  mutate(block_combination_type = 
+           ifelse(combination_release == 1, "Combiniation Late-Releasing Blocks", "Combination Non-Late-Releasing Blocks"), .after=block_combination)
 
 block_openings <- block_openings %>%
-  mutate(Slot.YearMonth = format(as.Date(SLOT_BEGIN_TIME),"%Y-%m"))
+  mutate(Slot.YearMonth = format(as.Date(SLOT_BEGIN_TIME),"%Y-%m")) %>%
+  dplyr::select(-c(total_openings, openings_not_release, blocks_not_release, combination_new, combination_release))
 
-block_openings <- block_openings %>%
-  mutate(incorrect_perc = round(incorrect_slot/total_slot,2))
+# block_openings <- block_openings %>%
+#   mutate(incorrect_perc = round(incorrect_slot/total_slot,2))
 
 block_openings$openings_new[is.na(block_openings$openings_new)] <- 0
 block_openings$`openings_non-new`[is.na(block_openings$`openings_non-new`)] <- 0
 block_openings$openings_release[is.na(block_openings$openings_release)] <- 0
 
-
 block_openings$Site <- dept_mapping$SITE[match(block_openings$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 block_openings$Specialty <- dept_mapping$DEPT_SPECIALTY_NAME[match(block_openings$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 block_openings$Department <- dept_mapping$DEPARTMENT_NAME[match(block_openings$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 block_openings$Provider <- prov_mapping$PROV_NAME[match(block_openings$PROV_ID, prov_mapping$PROV_ID)]
+
 ```
+
 
 
 ```{r Time Release Block Conversion, echo = FALSE, warning = FALSE, message = FALSE}
@@ -906,6 +932,12 @@ reactable(
     
     block_combination = colDef(
       name = "Blocks Assigned",
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)"),
+      minWidth = 150),
+    
+    block_combination_type = colDef(
+      name = "Block Combination Type",
       headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       style = list(borderLeft = "1.5px solid rgb(230, 230, 230)"),
       minWidth = 150),
