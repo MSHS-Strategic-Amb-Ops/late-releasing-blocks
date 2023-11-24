@@ -500,9 +500,7 @@ block_openings <- block_openings %>%
 
 block_openings <- block_openings %>%
   mutate(incorrect_slot = ifelse(incorrect_slot_reason == "", 0, 1)) %>%
-  filter(incorrect_slot == 1) %>%
-  mutate(block_combination_type = 
-           ifelse(combination_release == 1, "Combiniation Late-Releasing Blocks", "Combination Non-Late-Releasing Blocks"), .after=block_combination)
+  filter(incorrect_slot == 1) 
 
 block_openings <- block_openings %>%
   mutate(Slot.YearMonth = format(as.Date(SLOT_BEGIN_TIME),"%Y-%m")) %>%
@@ -932,12 +930,6 @@ reactable(
     
     block_combination = colDef(
       name = "Blocks Assigned",
-      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
-      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)"),
-      minWidth = 150),
-    
-    block_combination_type = colDef(
-      name = "Block Combination Type",
       headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       style = list(borderLeft = "1.5px solid rgb(230, 230, 230)"),
       minWidth = 150),
