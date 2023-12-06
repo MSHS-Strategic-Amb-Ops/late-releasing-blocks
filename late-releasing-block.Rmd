@@ -390,7 +390,8 @@ release_blocks <- c(
   "NEW GYN 7-DAY",
   "NEW GYN 14-DAY",
   "NEW GYN 21-DAY",
-  "NEW GYN 28-DAY"
+  "NEW GYN 28-DAY",
+  "Pregnancy Confirmation"
 )
 ```
 
