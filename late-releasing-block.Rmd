@@ -712,7 +712,7 @@ reactable(
   #                  fontWeight = "Bold")
   #           }
   #         },
-  groupBy = c("MSHS", "Site", "Department", "Specialty", "Provider"),
+  groupBy = c("MSHS", "Site", "Department", "Specialty", "PROV_TYPE", "Provider"),
   columns = list(
     Site = colDef(
       name = "Site",
@@ -720,13 +720,12 @@ reactable(
     
     Specialty = colDef(
       minWidth = 200),
-    
     Department = colDef(
       minWidth = 200),
-    Provider = colDef(
-      minWidth = 130),
     PROV_TYPE = colDef(
       name = "Provider Type",
+      minWidth = 130),
+    Provider = colDef(
       minWidth = 130),
     Slot.YearMonth = colDef(
       name = "Year-Month",
