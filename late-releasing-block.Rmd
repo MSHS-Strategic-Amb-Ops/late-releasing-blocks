@@ -675,6 +675,7 @@ htmltools::browsable(
 #     tags$hr("aria-hidden" = "true"),
 reactable(
   new_block_conversion %>%
+    mutate(MSHS = "MSHS Total") %>%
     mutate(Slot.YearMonth = as.character(Slot.YearMonth)),
   elementId = "block-conversion",
   # elementId = "cars-grouping-table",
@@ -701,7 +702,7 @@ reactable(
                    fontWeight = "Bold")
             }
           },
-  groupBy = c("Site", "Department", "Specialty", "Provider", "Slot.YearMonth"),
+  groupBy = c("MSHS", "Site", "Department", "Specialty", "Provider", "Slot.YearMonth"),
   columns = list(
     Site = colDef(
       name = "Site",
