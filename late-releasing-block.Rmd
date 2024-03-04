@@ -402,7 +402,6 @@ late_block_raw <- block_raw_tbl %>%
   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
          Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-    # filter(Slot.DateYear >= as.Date("2023-10-01")) %>%
   filter(Slot.DateYear >= as.Date("2024-03-01")) %>%
   # filter(Slot.Year == 2024) %>%
   # filter(Slot.Month >= 08) %>%
