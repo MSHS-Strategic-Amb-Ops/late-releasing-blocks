@@ -296,6 +296,9 @@ block_name_tbl <- tbl(conn2, "ZC_APPT_BLOCK")
 orders_raw_tbl <- tbl(conn2, "ORDER_PROC")
 coverage_tbl <- tbl(conn2, "V_PAT_ENC_COVERAGE")
 template_tbl <- tbl(conn2, "TEMPLATE")
+
+clarity_ser_tbl <- tbl(conn2, "CLARITY_SER")
+
 ```
 
 
@@ -525,21 +528,28 @@ block_openings$Provider <- prov_mapping$PROV_NAME[match(block_openings$PROV_ID, 
 ```{r Time Release Block Conversion, echo = FALSE, warning = FALSE, message = FALSE}
 # Categorize slots by non-new vs. new vs. new time-relese 
 blocks_combined_type <- blocks_combined %>%
+  left_join(clarity_ser_tbl %>% 
+              dplyr::select(PROV_ID, PROV_TYPE)) %>%
   mutate(new_block = case_when(comb_block_name %in% new_blocks ~ "NEW_BLOCK",
                                TRUE ~ "NON_NEW_BLOCK"),
          release_block = case_when(comb_block_name %in% release_blocks ~ "TIME_RELEASE",
                                    TRUE ~ "NON_TIME_RELEASE")) %>%
   collect() %>%
   arrange(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME, comb_block_name) %>%
-  group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME) %>%
+  group_by(DEPARTMENT_ID, PROV_ID, PROV_TYPE, SLOT_BEGIN_TIME) %>%
   mutate(block_combination = paste0(unique(comb_block_name), collapse = ', ')) %>%
-  group_by(DEPARTMENT_ID, PROV_ID, SLOT_BEGIN_TIME,  block_combination, new_block, release_block) %>%
+  group_by(DEPARTMENT_ID, PROV_ID, PROV_TYPE, SLOT_BEGIN_TIME,  block_combination, new_block, release_block) %>%
   summarise(total = n()) %>%
   mutate(Slot.YearMonth = format(as.Date(SLOT_BEGIN_TIME),"%Y-%m"))
+
+
 blocks_combined_type$Site <- dept_mapping$SITE[match(blocks_combined_type$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 blocks_combined_type$Specialty <- dept_mapping$DEPT_SPECIALTY_NAME[match(blocks_combined_type$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 blocks_combined_type$Department <- dept_mapping$DEPARTMENT_NAME[match(blocks_combined_type$DEPARTMENT_ID, dept_mapping$DEPARTMENT_ID)]
 blocks_combined_type$Provider <- prov_mapping$PROV_NAME[match(blocks_combined_type$PROV_ID, prov_mapping$PROV_ID)]
+
+
+
 # Summary of slot type by month   
 new_block_conversion <- blocks_combined_type %>%
   pivot_wider(names_from = c("new_block","release_block"),
@@ -550,7 +560,7 @@ new_block_conversion <- blocks_combined_type %>%
   mutate(NON_NEW_BLOCK_NON_TIME_RELEASE = ifelse(NON_NEW_BLOCK_NON_TIME_RELEASE>0 & NEW_BLOCK_NON_TIME_RELEASE==0 & NEW_BLOCK_TIME_RELEASE==0,1,0),
          NEW_BLOCK_NON_TIME_RELEASE = ifelse(NEW_BLOCK_NON_TIME_RELEASE>0 & NEW_BLOCK_TIME_RELEASE==0,1,0),
          NEW_BLOCK_TIME_RELEASE = ifelse(NEW_BLOCK_TIME_RELEASE>0,1,0)) %>%
-  group_by(Site, Specialty, Department, DEPARTMENT_ID, Provider, Slot.YearMonth) %>%
+  group_by(Site, Specialty, Department, DEPARTMENT_ID, Provider, PROV_TYPE, Slot.YearMonth) %>%
   summarise(NON_NEW_BLOCK_NON_TIME_RELEASE = sum(NON_NEW_BLOCK_NON_TIME_RELEASE),
             NEW_BLOCK_NON_TIME_RELEASE = sum(NEW_BLOCK_NON_TIME_RELEASE),
             NEW_BLOCK_TIME_RELEASE = sum(NEW_BLOCK_TIME_RELEASE),
@@ -566,7 +576,7 @@ new_block_conversion <- blocks_combined_type %>%
          incorrect_new_block_perc = round(incorrect_new_block/NEW_BLOCK_NON_TIME_RELEASE,2),
          incorrect_time_release_perc = round(incorrect_time_release_block/NEW_BLOCK_TIME_RELEASE,2)) %>%
   arrange(Site, Department, Provider)
-order <- c("Site","Department","Specialty","DEPARTMENT_ID","Provider","Slot.YearMonth",
+order <- c("Site","Department","Specialty","DEPARTMENT_ID","Provider","PROV_TYPE","Slot.YearMonth",
            "TOTAL_BLOCKS","TOTAL_NEW_BLOCKS",
            "NON_NEW_BLOCK_NON_TIME_RELEASE","NEW_BLOCK_NON_TIME_RELEASE","NEW_BLOCK_TIME_RELEASE",
            "correct_new_block", "incorrect_new_block",
@@ -675,7 +685,7 @@ htmltools::browsable(
 #     tags$hr("aria-hidden" = "true"),
 reactable(
   new_block_conversion %>%
-    mutate(MSHS = "MSHS Total") %>%
+    mutate(MSHS = "MSHS") %>%
     mutate(Slot.YearMonth = as.character(Slot.YearMonth)),
   elementId = "block-conversion",
   # elementId = "cars-grouping-table",
@@ -696,13 +706,13 @@ reactable(
     # height = 800,
     wrap = TRUE,
   searchable = TRUE,
-  rowStyle = function(index) {
-            if (index %in% c(10)) {
-              list(`border-top` = "2px solid rgb(184,184,184)",
-                   fontWeight = "Bold")
-            }
-          },
-  groupBy = c("MSHS", "Site", "Department", "Specialty", "Provider", "Slot.YearMonth"),
+  # rowStyle = function(index) {
+  #           if (index %in% c(10)) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+  groupBy = c("MSHS", "Site", "Department", "Specialty", "Provider"),
   columns = list(
     Site = colDef(
       name = "Site",
@@ -714,6 +724,9 @@ reactable(
     Department = colDef(
       minWidth = 200),
     Provider = colDef(
+      minWidth = 130),
+    PROV_TYPE = colDef(
+      name = "Provider Type",
       minWidth = 130),
     Slot.YearMonth = colDef(
       name = "Year-Month",
