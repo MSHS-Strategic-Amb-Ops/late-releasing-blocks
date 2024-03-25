@@ -421,6 +421,10 @@ late_block_raw <- block_raw_tbl %>%
               dplyr::select(-total),
             by = c("PROV_ID", "DEPARTMENT_ID", "SLOT_BEGIN_TIME")) 
 
+# check <- late_block_raw %>%
+#   head(10) %>%
+#   collect()
+
 ```
 
 
@@ -685,7 +689,7 @@ htmltools::browsable(
 #     tags$hr("aria-hidden" = "true"),
 reactable(
   new_block_conversion %>%
-    filter(PROV_TYPE == "Physicians") %>%
+    filter(PROV_TYPE == "Physician") %>%
     mutate(MSHS = "MSHS") %>%
     mutate(Slot.YearMonth = as.character(Slot.YearMonth)),
   elementId = "block-conversion-physicians",
