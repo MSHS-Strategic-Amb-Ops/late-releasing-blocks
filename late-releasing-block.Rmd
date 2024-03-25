@@ -662,7 +662,7 @@ ________________________________________________________________________________
 
 
 ## Late-Releasing New Patient Block Conversion (Physicians Only)
-```{r Block Conversion Output (block Count), echo = FALSE, warning = FALSE, message = FALSE}
+```{r Block Conversion Output (block Count) Physicians Only, echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
   tagList(
