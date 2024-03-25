@@ -661,6 +661,181 @@ ________________________________________________________________________________
 <br/>
 
 
+## Late-Releasing New Patient Block Conversion (Physicians Only)
+```{r Block Conversion Output (block Count), echo = FALSE, warning = FALSE, message = FALSE}
+# Table Output -----------------------------------------------------------------
+htmltools::browsable(
+  tagList(
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download Table"),
+      onclick = "Reactable.downloadDataCSV('block-conversion-physicians', 'Physicians Block Conversion')"
+    ),
+# htmltools::browsable(
+#   tagList(
+#     div(tags$label("Group by", `for` = "cars-grouping-select")),
+#     tags$select(
+#       id = "cars-grouping-select",
+#       onchange = "Reactable.setGroupBy('cars-grouping-table', this.value ? [this.value] : [])",
+#       tags$option("None", value = c("Campus","Campus.Specialty.Group")),
+#       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")),
+#       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#       lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#     ),
+#
+#     tags$hr("aria-hidden" = "true"),
+reactable(
+  new_block_conversion %>%
+    filter(PROV_TYPE == "Physicians") %>%
+    mutate(MSHS = "MSHS") %>%
+    mutate(Slot.YearMonth = as.character(Slot.YearMonth)),
+  elementId = "block-conversion-physicians",
+  # elementId = "cars-grouping-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left",
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  # rowStyle = function(index) {
+  #           if (index %in% c(10)) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+  groupBy = c("MSHS", "Site", "Department", "Specialty", "PROV_TYPE", "Provider"),
+  columns = list(
+    Site = colDef(
+      name = "Site",
+      minWidth = 180),
+    
+    Specialty = colDef(
+      minWidth = 200),
+    Department = colDef(
+      minWidth = 200),
+    PROV_TYPE = colDef(
+      name = "Provider Type",
+      minWidth = 130),
+    Provider = colDef(
+      minWidth = 130),
+    Slot.YearMonth = colDef(
+      name = "Year-Month",
+      minWidth = 100),
+    TOTAL_BLOCKS = colDef(
+      name = "Total Blocks",
+      maxWidth = 100,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    TOTAL_NEW_BLOCKS = colDef(
+      name = "Total New Patient Blocks",
+      maxWidth = 100,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    
+    correct_new_block = colDef(
+      name = "Individual Non-Late-Releasing Blocks",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    incorrect_new_block = colDef(
+      name = "Combination Non-Late-Releasing Blocks",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    correct_time_release_block = colDef(
+      name = "Individual Late-Releasing Blocks",
+      maxWidth = 100,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    incorrect_time_release_block = colDef(
+      name = "Combination Late-Releasing Blocks",
+      maxWidth = 100,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = 'sum',
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    NEW_BLOCK_PERC = colDef(
+      name = "% of New Patient Blocks",
+      maxWidth = 150,
+     headerStyle = list(background = "#a5a7a5", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = JS("function(values, rows) {
+        let totalTOTAL_BLOCKS = 0
+        let totalTOTAL_NEW_BLOCKS = 0
+        rows.forEach(function(row) {
+          totalTOTAL_BLOCKS += row['TOTAL_BLOCKS']
+          totalTOTAL_NEW_BLOCKS += row['TOTAL_NEW_BLOCKS']
+        })
+        return (totalTOTAL_NEW_BLOCKS) / totalTOTAL_BLOCKS || '-'
+      }"),
+      format = colFormat(percent = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    NEW_BLOCK_TIME_RELEASE_PERC = colDef(
+      name = "% of New Patient Blocks Converted to Late-Releasing Blocks",
+      maxWidth = 150,
+     headerStyle = list(background = "#a5a7a5", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = JS("function(values, rows) {
+        let totalTOTAL_NEW_BLOCKS = 0
+        let totalNEW_BLOCK_TIME_RELEASE = 0
+        rows.forEach(function(row) {
+          totalTOTAL_NEW_BLOCKS += row['TOTAL_NEW_BLOCKS']
+          totalNEW_BLOCK_TIME_RELEASE += row['NEW_BLOCK_TIME_RELEASE']
+        })
+        return (totalNEW_BLOCK_TIME_RELEASE) / totalTOTAL_NEW_BLOCKS || '-'
+      }"),
+      format = colFormat(percent = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    # Specialty = colDef(show =F),
+    DEPARTMENT_ID = colDef(show =F),
+    NON_NEW_BLOCK_NON_TIME_RELEASE = colDef(show =F),
+    NEW_BLOCK_TIME_RELEASE = colDef(show =F),
+    NEW_BLOCK_NON_TIME_RELEASE = colDef(show =F),
+    incorrect_new_block = colDef(show =F),
+    incorrect_late_release_block = colDef(show =F),
+    incorrect_new_block_perc = colDef(show =F),
+    incorrect_time_release_perc = colDef(show =F)
+  ) # Close Columns
+  ) # Close Reactable
+ )
+)
+```
+<br/>
+<br/>
+
 ## Late-Releasing New Patient Block Conversion
 ```{r Block Conversion Output (block Count), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
