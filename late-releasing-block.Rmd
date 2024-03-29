@@ -405,7 +405,7 @@ late_block_raw <- block_raw_tbl %>%
   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
          Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-  filter(Slot.DateYear >= as.Date("2024-03-01")) %>%
+  filter(Slot.DateYear >= as.Date("2024-04-01")) %>%
   # filter(Slot.Year == 2024) %>%
   # filter(Slot.Month >= 08) %>%
   left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME), 
@@ -421,9 +421,64 @@ late_block_raw <- block_raw_tbl %>%
               dplyr::select(-total),
             by = c("PROV_ID", "DEPARTMENT_ID", "SLOT_BEGIN_TIME")) 
 
-# check <- late_block_raw %>%
-#   head(10) %>%
-#   collect()
+```
+
+
+```{r No Show Rates, echo = FALSE, warning = FALSE, message = FALSE}
+
+# access_data <- access_raw_tbl %>%
+#   left_join(block_raw_tbl %>% dplyr::select("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME", "BLOCK_C", "REL_BLOCK_C"),
+#             by = c("APPT_DTTM" = "SLOT_BEGIN_TIME",
+#                    "DEPARTMENT_ID" =  "DEPARTMENT_ID",
+#                    "PROV_ID" = "PROV_ID")) %>%
+#   left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME),
+#             by = c("BLOCK_C" = "APPT_BLOCK_C")) %>%
+#   left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME),
+#             by = c("REL_BLOCK_C" = "APPT_BLOCK_C")) %>%
+#   rename(block_name = NAME.x,
+#          org_block_name = NAME.y)
+#   
+# 
+# 
+# access_data <- access_data %>%
+#   mutate(Appt.DateYear = TO_DATE(APPT_DTTM),
+#          Appt.Year = year(APPT_DTTM),
+#          Appt.MonNum = month(APPT_DTTM),
+#          Appt.Made.DateYear = TO_DATE(APPT_MADE_DTTM),
+#          Appt.Made.Year = year(APPT_MADE_DTTM),
+#          Appt.Made.MonNum = month(APPT_MADE_DTTM)) %>%
+#   mutate(Wait.Time = TO_DATE(CONTACT_DATE) - TO_DATE(APPT_MADE_DATE)) %>%
+#   mutate(group = ifelse(Wait.Time >= 0 & Wait.Time <=7, "0-7",
+#                         ifelse(Wait.Time >7 & Wait.Time <=14, "8-14",
+#                                ifelse(Wait.Time >14 & Wait.Time <=30, "15-30", ">30")))) %>%
+#   mutate(New.PT2  = ifelse(is.na(VISIT_GROUP_NUM), 'Established', 'New')) %>%
+#   mutate(Visit.Method  = ifelse(VISIT_METHOD == "IN PERSON", 'IN PERSON', 'TELEHEALTH')) %>%
+#   mutate(sameDay_canceled = ifelse(CONTACT_DATE == APPT_CANC_DATE, "Yes", "No")) %>%
+#   mutate(Appt.Status = case_when(sameDay_canceled == "Yes" & DERIVED_STATUS_DESC %in% c("Canceled","Rescheduled","Bumped") ~ paste0("SameDay ",DERIVED_STATUS_DESC),
+#                                  TRUE ~ DERIVED_STATUS_DESC))
+#   
+# 
+# 
+# no_show <- access_data %>%
+#   filter(Appt.Year >= 2023) %>%
+#   mutate(comb_block_name = trim(ifelse(is.na(org_block_name), block_name, org_block_name))) %>%
+#   group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_NAME_WID, PROV_ID, Appt.Year, Appt.MonNum, comb_block_name, Appt.Status) %>%
+#   summarise(total = n()) %>%
+#   collect() %>%
+#   mutate(block_type = case_when(comb_block_name %in% release_blocks ~ "Late-Releasing",
+#                                 comb_block_name %in% new_blocks ~ "Non-Late Releasing New",
+#                                 TRUE ~ "Other")) %>%
+#   group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_NAME_WID, PROV_ID, Appt.Year, Appt.MonNum, block_type, Appt.Status) %>%
+#   summarise(total = sum(total)) %>%
+#   pivot_wider(names_from = Appt.Status,
+#               values_from = total, 
+#               values_fill = 0) %>%
+#   mutate(no_show_rate = `No Show`/(Arrived + `No Show`),
+#          no_show_plus_rate = (`No Show` + `SameDay Canceled`)/(Arrived + `No Show` + `SameDay Canceled`))
+# 
+# 
+# no_show_summary <- no_show %>%
+#   dplyr::select(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_NAME_WID, PROV_ID, Appt.Year, Appt.MonNum, block_type, Arrived, `No Show`, `SameDay Canceled`, no_show_rate, no_show_plus_rate) 
 
 ```
 
