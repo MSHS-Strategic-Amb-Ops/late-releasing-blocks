@@ -383,7 +383,12 @@ new_blocks <- c(
   "NEW GYN 7-DAY",
   "NEW GYN 14-DAY",
   "NEW GYN 21-DAY",
-  "NEW GYN 28-DAY"
+  "NEW GYN 28-DAY",
+  "PEDS DERM NEW PATIENT 7",
+  "PEDS DERM NEW PATIENT 14",
+  "PEDS DERM NEW PATIENT 21",
+  "PEDS DERM NEW PATIENT 28",
+  "PAL CARE NEW PATIENT 7"
 )
 release_blocks <- c(
   "New Patient 14-Day",
@@ -394,7 +399,12 @@ release_blocks <- c(
   "NEW GYN 14-DAY",
   "NEW GYN 21-DAY",
   "NEW GYN 28-DAY",
-  "Pregnancy Confirmation"
+  "Pregnancy Confirmation",
+  "PEDS DERM NEW PATIENT 7",
+  "PEDS DERM NEW PATIENT 14",
+  "PEDS DERM NEW PATIENT 21",
+  "PEDS DERM NEW PATIENT 28",
+  "PAL CARE NEW PATIENT 7"
 )
 ```
 
