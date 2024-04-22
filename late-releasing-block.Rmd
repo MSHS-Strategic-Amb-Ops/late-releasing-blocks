@@ -299,6 +299,16 @@ template_tbl <- tbl(conn2, "TEMPLATE")
 
 clarity_ser_tbl <- tbl(conn2, "CLARITY_SER")
 
+clarity_ser <- clarity_ser_tbl %>%
+  collect()
+
+clarity_ser <- clarity_ser %>%
+  filter(!is.na(PROV_TYPE)) %>%
+  dplyr::select(PROV_ID, PROV_TYPE, PROV_NAME)
+
+# require(openxlsx)
+# write.xlsx(clarity_ser, "Clarity Ser.xlsx")
+
 ```
 
 
@@ -755,6 +765,7 @@ htmltools::browsable(
 reactable(
   new_block_conversion %>%
     filter(PROV_TYPE == "Physician") %>%
+    filter(Site %!in% c("MSHP")) %>%
     mutate(MSHS = "MSHS") %>%
     mutate(Slot.YearMonth = as.character(Slot.YearMonth)),
   elementId = "block-conversion-physicians",
@@ -929,6 +940,7 @@ htmltools::browsable(
 #     tags$hr("aria-hidden" = "true"),
 reactable(
   new_block_conversion %>%
+    filter(Site %!in% c("MSHP")) %>%
     mutate(MSHS = "MSHS") %>%
     mutate(Slot.YearMonth = as.character(Slot.YearMonth)),
   elementId = "block-conversion",
@@ -1104,6 +1116,7 @@ htmltools::browsable(
 #     tags$hr("aria-hidden" = "true"),
 reactable(
   block_openings %>%
+    filter(Site %!in% c("MSHP")) %>%
     mutate(Slot.YearMonth = as.character(Slot.YearMonth),
            SLOT_BEGIN_TIME = as.character(SLOT_BEGIN_TIME)),
   elementId = "block-build-openings",
