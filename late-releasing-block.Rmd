@@ -311,6 +311,29 @@ clarity_ser <- clarity_ser %>%
 
 ```
 
+```{r}
+
+data <- access_raw_tbl %>%
+  # left_join(clarity_ser_tbl %>% 
+  #             dplyr::select(PROV_ID, PROV_TYPE, PROV_NAME)) %>%
+  filter(DERIVED_STATUS_DESC == "Arrived") %>%
+  mutate(appt_year = year(CONTACT_DATE),
+         appt_month = month(CONTACT_DATE)) %>%
+  filter(appt_year >= 2023) %>%
+  group_by(appt_year, appt_month, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID,
+           PROV_ID, PROV_NAME_WID, VISIT_PROV_STAFF_RESOURCE_C,
+           VISIT_METHOD, PRC_NAME, VISIT_TYPE, APPT_LENGTH) %>%
+  summarise(total = n()) %>%
+  collect()
+
+urology_procedures <- access_raw_tbl %>%
+  filter(DERIVED_STATUS_DESC == "Arrived") %>%
+  mutate(appt_year = year(CONTACT_DATE),
+         appt_month = month(CONTACT_DATE)) %>%
+  filter(appt_year >= 2023) %>% 
+  filter(DEPARTMENT_NAME %like% "=")
+
+```
 
 ```{r Report Variables, echo = FALSE, warning = FALSE, message = FALSE}
 report_run_date <- Sys.Date()
@@ -425,7 +448,7 @@ late_block_raw <- block_raw_tbl %>%
   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
          Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-  filter(Slot.DateYear >= as.Date("2024-05-01")) %>%
+  filter(Slot.DateYear >= as.Date("2024-06-01")) %>%
   # filter(Slot.Year == 2024) %>%
   # filter(Slot.Month >= 08) %>%
   left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME), 
