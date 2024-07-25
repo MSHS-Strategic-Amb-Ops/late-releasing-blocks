@@ -820,7 +820,7 @@ reactable(
   #                  fontWeight = "Bold")
   #           }
   #         },
-  groupBy = c("MSHS", "Site", "Department", "Specialty", "PROV_TYPE", "Provider", "ACTIVE_STATUS"),
+  groupBy = c("MSHS", "Site", "Department", "Specialty", "PROV_TYPE", "Provider", "ACTIVE_STATUS", "Slot.YearMonth"),
   columns = list(
     Site = colDef(
       name = "Site",
@@ -1002,7 +1002,7 @@ reactable(
   #                  fontWeight = "Bold")
   #           }
   #         },
-  groupBy = c("MSHS", "Site", "Department", "Specialty", "PROV_TYPE", "Provider"),
+  groupBy = c("MSHS", "Site", "Department", "Specialty", "PROV_TYPE", "Provider",  "ACTIVE_STATUS", "Slot.YearMonth"),
   columns = list(
     Site = colDef(
       name = "Site",
