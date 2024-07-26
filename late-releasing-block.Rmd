@@ -299,14 +299,14 @@ template_tbl <- tbl(conn2, "TEMPLATE")
 
 clarity_ser_tbl <- tbl(conn2, "CLARITY_SER")
 
-clarity_ser <- clarity_ser_tbl %>%
-  collect()
-
-clarity_ser <- clarity_ser %>%
-  filter(!is.na(PROV_TYPE)) %>%
-  dplyr::select(PROV_ID, PROV_TYPE, PROV_NAME, ACTIVE_STATUS)
-
-# require(openxlsx)
+# clarity_ser <- clarity_ser_tbl %>%
+#   collect()
+# 
+# clarity_ser <- clarity_ser %>%
+#   filter(!is.na(PROV_TYPE)) %>%
+#   dplyr::select(PROV_ID, PROV_TYPE, PROV_NAME, ACTIVE_STATUS)
+# 
+# # require(openxlsx)
 # write.xlsx(clarity_ser, "Clarity Ser.xlsx")
 
 ```
