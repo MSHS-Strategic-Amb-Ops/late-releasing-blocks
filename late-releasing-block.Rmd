@@ -287,6 +287,7 @@ conn2 <- dbConnect(odbc(),
                   "Clarity_prod", 
                   uid = "kweons01" , 
                   pwd = "kweons01123$")
+
 # Import Slot Availability Data ------------------------------------------------
 slot_raw_tbl <- tbl(conn2, "Y_DM_BOOKED_FILLED_RATE")
 access_raw_tbl <- tbl(conn2, "MV_DM_PATIENT_ACCESS")
@@ -299,15 +300,12 @@ template_tbl <- tbl(conn2, "TEMPLATE")
 
 clarity_ser_tbl <- tbl(conn2, "CLARITY_SER")
 
-# clarity_ser <- clarity_ser_tbl %>%
-#   collect()
-# 
-# clarity_ser <- clarity_ser %>%
-#   filter(!is.na(PROV_TYPE)) %>%
-#   dplyr::select(PROV_ID, PROV_TYPE, PROV_NAME, ACTIVE_STATUS)
-# 
-# # require(openxlsx)
-# write.xlsx(clarity_ser, "Clarity Ser.xlsx")
+conn3 <- dbPool(drv = odbc(), dsn = "OAO Cloud DB Staging", timeout = 30)
+slot_view_block_tbl <- tbl(conn3, "AMBULATORY_SLOT_BLOCK_TABLE")
+
+conn4 <- dbPool(drv = odbc(), dsn = "OAO Cloud DB Production", timeout = 30)
+slot_view_tbl <- tbl(conn4, in_schema("OAO_PRODUCTION", "AMBULATORY_SLOT_TABLE"))
+
 
 ```
 
@@ -439,6 +437,78 @@ release_blocks <- c(
   "PEDS DERM NEW PATIENT 28",
   "PAL CARE NEW PATIENT 7"
 )
+```
+
+
+```{r}
+
+
+# access_raw <- access_raw_tbl %>%
+#   mutate(year = year(CONTACT_DATE),
+#          month = month(CONTACT_DATE)) %>%
+#   filter(year >= 2022) %>%
+#   filter(DERIVED_STATUS_DESC == "Arrived") %>%
+#   group_by(year, month, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_NAME_WID, PROV_ID, APPT_BLOCK_NAME, PRC_NAME, VISIT_GROUP_NUM) %>%
+#   summarise(total_arrived_appts = n(),
+#             total_arrived_hours = sum(APPT_LENGTH)) %>%
+#   collect()
+# 
+# 
+# clarity_ser <- clarity_ser_tbl %>% 
+#   dplyr::select(PROV_ID, PROV_TYPE, PROV_NAME) %>%
+#   collect()
+# 
+# 
+# access_raw_block <- access_raw %>%
+#   left_join(clarity_ser) %>%
+#   mutate(total_arrived_hours = round(total_arrived_hours/60,1)) %>%
+#   mutate(NEW_APPT_YN = ifelse(is.na(VISIT_GROUP_NUM), "N", "Y"),
+#          NEW_BLOCK_YN = ifelse(APPT_BLOCK_NAME %in% new_blocks, "Y", "N")) %>%
+#   ungroup() %>%
+#   dplyr::select(year, month, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_NAME, PROV_ID, PROV_TYPE, 
+#                 APPT_BLOCK_NAME, NEW_BLOCK_YN,
+#                 PRC_NAME, NEW_APPT_YN,
+#                 total_arrived_appts, total_arrived_hours)
+# 
+# access_raw_block_filtered <- access_raw_block %>%
+#   filter(paste0(year,month) != "20247") %>%
+#   filter(paste0(year,month) != "20248")
+# 
+# require(openxlsx)
+# write.xlsx(access_raw_block_filtered, "Volume and Hours by Block Type_Jan22_Jun24.xlsx")
+# 
+# 
+# 
+# slot_view_block <- slot_view_block_tbl %>%
+#   mutate(slot_year = year(SLOT_DATE),
+#          slot_month = month(SLOT_DATE)) %>%
+#   filter(slot_year == 2023) %>%
+#   # filter(SLOT_DATE < as.Date("2024-07-01")) %>%
+#   group_by(slot_year, slot_month, SLOT_DATE, CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT, PROVIDER, PROV_ID, 
+#            BLOCK_NAME, ORG_BLOCK_NAME) %>%
+#   summarise(AVAILABLE_MINS = sum(AVAILABLE_MINS, na.rm = T)) %>%
+#   collect()
+# 
+# slot_view_block_collapsed <- slot_view_block %>%
+#   group_by(slot_year, slot_month, SLOT_DATE, CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT, PROVIDER, PROV_ID) %>%
+#   summarise(AVAILABLE_MINS = sum(AVAILABLE_MINS, na.rm = T)) %>%
+#   rename("AVAILABLE_MINS_BLOCK" = AVAILABLE_MINS)
+# 
+# 
+# 
+# slot_view <- slot_view_tbl %>%
+#   mutate(slot_year = year(SLOT_DATE),
+#          slot_month = month(SLOT_DATE)) %>%
+#  filter(slot_year == 2023) %>%
+#   # filter(SLOT_DATE < as.Date("2024-07-01")) %>%
+#   group_by(slot_year, slot_month, SLOT_DATE, CAMPUS, CAMPUS_SPECIALTY, DEPARTMENT, PROVIDER, PROV_ID) %>%
+#   summarise(AVAILABLE_MINS = sum(AVAILABLE_MINS, na.rm = T)) %>%
+#   collect()
+# 
+# slot_view$AVAILABLE_MINS[is.na(slot_view$AVAILABLE_MINS)] <- 0
+# 
+# slot_merged <- merge(slot_view, slot_view_block_collapsed)
+
 ```
 
 
