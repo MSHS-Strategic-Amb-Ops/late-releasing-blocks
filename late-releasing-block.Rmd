@@ -306,7 +306,22 @@ slot_view_block_tbl <- tbl(conn3, "AMBULATORY_SLOT_BLOCK_TABLE")
 conn4 <- dbPool(drv = odbc(), dsn = "OAO Cloud DB Production", timeout = 30)
 slot_view_tbl <- tbl(conn4, in_schema("OAO_PRODUCTION", "AMBULATORY_SLOT_TABLE"))
 
-
+# block_name <- block_name_tbl %>%
+#   collect()
+# 
+# access <- access_raw_tbl %>%
+#   mutate(year = year(CONTACT_DATE),
+#          month = month(CONTACT_DATE)) %>%
+#   filter(year == 2024) %>%
+#   filter(month == 7) %>%
+#   collect()
+# 
+# access_arrived <- access %>%
+#   filter(DERIVED_STATUS_DESC == "Arrived")
+# 
+# prc <- access_arrived %>% filter(PRC_ID == 9875) %>% group_by(PRC_ID, PRC_NAME, APPT_BLOCK_C, APPT_BLOCK_NAME) %>% summarise(total = n())
+# require(openxlsx)
+# write.xlsx(prc, "PRC ID 9875.xlsx")
 ```
 
 ```{r}
@@ -419,7 +434,8 @@ new_blocks <- c(
   "PEDS DERM NEW PATIENT 14",
   "PEDS DERM NEW PATIENT 21",
   "PEDS DERM NEW PATIENT 28",
-  "PAL CARE NEW PATIENT 7"
+  "PAL CARE NEW PATIENT 7",
+  "Annual Well New Pt"
 )
 release_blocks <- c(
   "New Patient 14-Day",
@@ -517,6 +533,7 @@ release_blocks <- c(
 
 # Slot Block Data --------------------------------------------------------------
 late_block_raw <- block_raw_tbl %>%
+  
   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
          Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
