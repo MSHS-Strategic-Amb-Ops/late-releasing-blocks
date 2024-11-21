@@ -537,7 +537,7 @@ late_block_raw <- block_raw_tbl %>%
   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
          Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-  filter(Slot.DateYear >= as.Date("2024-10-01")) %>%
+  filter(Slot.DateYear >= as.Date("2024-11-01")) %>%
   # filter(Slot.Year == 2024) %>%
   # filter(Slot.Month >= 08) %>%
   left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME), 
