@@ -288,6 +288,7 @@ conn2 <- dbConnect(odbc(),
                   uid = "kweons01" , 
                   pwd = "kweons01123$")
 
+
 # Import Slot Availability Data ------------------------------------------------
 slot_raw_tbl <- tbl(conn2, "Y_DM_BOOKED_FILLED_RATE")
 access_raw_tbl <- tbl(conn2, "MV_DM_PATIENT_ACCESS")
@@ -299,6 +300,12 @@ coverage_tbl <- tbl(conn2, "V_PAT_ENC_COVERAGE")
 template_tbl <- tbl(conn2, "TEMPLATE")
 
 clarity_ser_tbl <- tbl(conn2, "CLARITY_SER")
+clarity_ser_myc_tbl <- tbl(conn2, "CLARITY_SER_MYC")
+clarity_dep_myc_tbl <- tbl(conn2, "CLARITY_DEP_MYC")
+
+clarity_ser_myc <- clarity_ser_myc_tbl %>%
+  collect()
+
 
 conn3 <- dbPool(drv = odbc(), dsn = "OAO Cloud DB Staging", timeout = 30)
 slot_view_block_tbl <- tbl(conn3, "AMBULATORY_SLOT_BLOCK_TABLE")
@@ -350,6 +357,8 @@ slot_view_tbl <- tbl(conn4, in_schema("OAO_PRODUCTION", "AMBULATORY_SLOT_TABLE")
 
 ```{r Report Variables, echo = FALSE, warning = FALSE, message = FALSE}
 report_run_date <- Sys.Date()
+
+date_start <- paste0(format(Sys.Date(), "%Y-%m"),"-01")
 ```
 
 
@@ -537,7 +546,7 @@ late_block_raw <- block_raw_tbl %>%
   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
          Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
-  filter(Slot.DateYear >= as.Date("2024-12-01")) %>%
+  filter(Slot.DateYear >= as.Date(date_start)) %>%
   # filter(Slot.Year == 2024) %>%
   # filter(Slot.Month >= 08) %>%
   left_join(block_name_tbl %>% dplyr::select(APPT_BLOCK_C, NAME), 
