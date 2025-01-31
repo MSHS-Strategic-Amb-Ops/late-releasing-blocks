@@ -448,18 +448,18 @@ new_blocks <- c(
 )
 release_blocks <- c(
   "New Patient 14-Day",
-  "New Patient 21-Day",
-  "New Patient 28-Day",
+  # "New Patient 21-Day",
+  # "New Patient 28-Day",
   "New Patient 7-Day",
   "NEW GYN 7-DAY",
   "NEW GYN 14-DAY",
-  "NEW GYN 21-DAY",
-  "NEW GYN 28-DAY",
+  # "NEW GYN 21-DAY",
+  # "NEW GYN 28-DAY",
   "Pregnancy Confirmation",
   "PEDS DERM NEW PATIENT 7",
   "PEDS DERM NEW PATIENT 14",
-  "PEDS DERM NEW PATIENT 21",
-  "PEDS DERM NEW PATIENT 28",
+  # "PEDS DERM NEW PATIENT 21",
+  # "PEDS DERM NEW PATIENT 28",
   "PAL CARE NEW PATIENT 7"
 )
 ```
@@ -542,7 +542,6 @@ release_blocks <- c(
 
 # Slot Block Data --------------------------------------------------------------
 late_block_raw <- block_raw_tbl %>%
-  
   mutate(Slot.DateYear = TO_DATE(SLOT_BEGIN_TIME),
          Slot.Year = year(SLOT_BEGIN_TIME),
          Slot.Month = month(SLOT_BEGIN_TIME)) %>%
@@ -762,7 +761,7 @@ new_block_conversion <- blocks_combined_type %>%
   mutate(NON_NEW_BLOCK_NON_TIME_RELEASE = ifelse(NON_NEW_BLOCK_NON_TIME_RELEASE>0 & NEW_BLOCK_NON_TIME_RELEASE==0 & NEW_BLOCK_TIME_RELEASE==0,1,0),
          NEW_BLOCK_NON_TIME_RELEASE = ifelse(NEW_BLOCK_NON_TIME_RELEASE>0 & NEW_BLOCK_TIME_RELEASE==0,1,0),
          NEW_BLOCK_TIME_RELEASE = ifelse(NEW_BLOCK_TIME_RELEASE>0,1,0)) %>%
-  group_by(Site, Specialty, Department, DEPARTMENT_ID, Provider, PROV_TYPE, ACTIVE_STATUS, Slot.YearMonth, SLOT_LENGTH) %>%
+  group_by(Site, Specialty, Department, DEPARTMENT_ID, PROV_ID, Provider, PROV_TYPE, ACTIVE_STATUS, Slot.YearMonth, SLOT_LENGTH) %>%
   summarise(NON_NEW_BLOCK_NON_TIME_RELEASE = sum(NON_NEW_BLOCK_NON_TIME_RELEASE),
             NEW_BLOCK_NON_TIME_RELEASE = sum(NEW_BLOCK_NON_TIME_RELEASE),
             NEW_BLOCK_TIME_RELEASE = sum(NEW_BLOCK_TIME_RELEASE),
@@ -778,7 +777,7 @@ new_block_conversion <- blocks_combined_type %>%
          incorrect_new_block_perc = round(incorrect_new_block/NEW_BLOCK_NON_TIME_RELEASE,2),
          incorrect_time_release_perc = round(incorrect_time_release_block/NEW_BLOCK_TIME_RELEASE,2)) %>%
   arrange(Site, Department, Provider)
-order <- c("Site","Department","Specialty","DEPARTMENT_ID","Provider","PROV_TYPE", "ACTIVE_STATUS", "Slot.YearMonth", "SLOT_LENGTH",
+order <- c("Site","Department","Specialty","DEPARTMENT_ID", "PROV_ID", "Provider","PROV_TYPE", "ACTIVE_STATUS", "Slot.YearMonth", "SLOT_LENGTH",
            "TOTAL_BLOCKS","TOTAL_NEW_BLOCKS",
            "NON_NEW_BLOCK_NON_TIME_RELEASE","NEW_BLOCK_NON_TIME_RELEASE","NEW_BLOCK_TIME_RELEASE",
            "correct_new_block", "incorrect_new_block",
@@ -848,6 +847,35 @@ new_block_conversion$NEW_BLOCK_TIME_RELEASE_PERC[is.nan(new_block_conversion$NEW
 #   pivot_wider(names_from = SLOT_LENGTH,
 #               values_from = total,
 #               values_fill = 0)
+```
+
+
+```{r New Patients Scheduled within 14 Days, echo = FALSE, warning = FALSE, message = FALSE}
+
+waitTime_date_end <- paste0(format(Sys.Date(), "%Y-%m"),"-01")
+waitTime_date_start <- as.Date(waitTime_date_end) - months(3)
+
+new_pt_waitTime <- access_raw_tbl %>%
+  mutate(Appt.Made.DateYear = TO_DATE(CONTACT_DATE),
+         Appt.Made.Year = year(CONTACT_DATE),
+         Appt.Made.Month = month(CONTACT_DATE),
+         Appt.Made.YearMonth = paste0(Appt.Made.Year,"-",Appt.Made.Month)) %>%
+  filter(Appt.Made.DateYear >= as.Date(waitTime_date_start)) %>%
+  filter(Appt.Made.DateYear < as.Date(waitTime_date_end)) %>%
+  mutate(wait_time = CONTACT_DATE-APPT_MADE_DATE) %>%
+  # filter(wait_time >= 0) %>%
+  filter(VISIT_GROUP_NUM == 4) %>%
+  mutate(waitTime_14days = ifelse(wait_time <= 14, "Yes", "No")) %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_ID, PROV_NAME_WID, Appt.Made.YearMonth, waitTime_14days) %>%
+  summarise(total = n()) %>%
+  collect() %>%
+  pivot_wider(names_from = waitTime_14days,
+              values_from = total,
+              values_fill = 0) %>%
+  mutate(total_new_scheduled = (Yes+No),
+         perc_14days = Yes/(Yes+No)) %>%
+  mutate(MSHS = "MSHS") %>%
+  mutate(Provider = trimws(gsub("\\[.*?\\]", "", PROV_NAME_WID)))
 ```
 
 
@@ -1014,7 +1042,7 @@ reactable(
     ),
     
     NEW_BLOCK_TIME_RELEASE_PERC = colDef(
-      name = "% of New Patient Blocks Converted to Late-Releasing Blocks",
+      name = "% of New Patient Blocks Converted to 7 or 14-Day Late-Releasing Blocks",
       maxWidth = 150,
      headerStyle = list(background = "#a5a7a5", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = JS("function(values, rows) {
@@ -1027,8 +1055,20 @@ reactable(
         return (totalNEW_BLOCK_TIME_RELEASE) / totalTOTAL_NEW_BLOCKS || '-'
       }"),
       format = colFormat(percent = TRUE, digits = 0),
-      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+     style = JS("function(rowInfo) {
+        var value = rowInfo.row['NEW_BLOCK_TIME_RELEASE_PERC']
+        if (value >= 0.75) {
+          var color = '#008000'
+        } else if (value < 0.75 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }")
+      # style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
     ),
+    
     # Specialty = colDef(show =F),
     DEPARTMENT_ID = colDef(show =F),
     NON_NEW_BLOCK_NON_TIME_RELEASE = colDef(show =F),
@@ -1195,7 +1235,7 @@ reactable(
     ),
     
     NEW_BLOCK_TIME_RELEASE_PERC = colDef(
-      name = "% of New Patient Blocks Converted to Late-Releasing Blocks",
+      name = "% of New Patient Blocks Converted to 7/14-Day Late-Releasing Blocks",
       maxWidth = 150,
      headerStyle = list(background = "#a5a7a5", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = JS("function(values, rows) {
@@ -1389,6 +1429,128 @@ reactable(
 <br/>
 <br/>
 
+
+## New Patients Scheduled within 14 Days
+```{r New Patients Scheduled within 14 Days Output, echo = FALSE, warning = FALSE, message = FALSE}
+
+reactable(
+  new_pt_waitTime %>%
+    dplyr::select(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_ID, PROV_NAME_WID, Provider, Appt.Made.YearMonth, total_new_scheduled, Yes, No, perc_14days),
+  elementId = "new-pt-waitTime",
+  # elementId = "referral-vol-download-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left",
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+
+  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "Provider", "Appt.Made.YearMonth"),
+
+  columnGroups = list(
+    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "Provider", "Appt.Made.YearMonth"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("New Patients Scheduled ", waitTime_date_start, " - ",  as.Date(waitTime_date_end)-days(1)), 
+             columns = c("total_new_scheduled", "Yes", "No", "perc_14days"),
+             headerStyle = list(color = "#210070", fontSize = "15px"))
+    ),
+
+  columns = list(
+
+    SITE = colDef(
+      # footer = "Total",
+      name = "Site",
+      minWidth = 180),
+
+    DEPT_SPECIALTY_NAME = colDef(
+      name = "Specialty",
+      minWidth = 250),
+    
+    DEPARTMENT_NAME = colDef(
+      name = "Department",
+      minWidth = 250),
+    
+    Provider = colDef(
+      name = "Provider",
+      minWidth = 200),
+    
+    Appt.Made.YearMonth = colDef(
+      name = "Year-Month",
+      minWidth = 100),
+
+    total_new_scheduled = colDef(
+      name = "New Patients Scheduled",
+      maxWidth = 100,
+      headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Yes = colDef(
+      name = "New Patients Scheduled <=14 Days",
+      maxWidth = 100,
+      headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    No = colDef(
+      name = "New Patients Scheduled >14 Days",
+      maxWidth = 100,
+      headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    perc_14days = colDef(
+      name = "% New Patients Scheduled <=14 Days",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalYes = 0
+        let totalNo = 0
+        rows.forEach(function(row) {
+          totalYes += row['Yes']
+          totalNo += row['No']
+        })
+        return (totalYes) / (totalYes + totalNo)
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['perc_14days']
+        if (value >= 0.6) {
+          var color = '#008000'
+        } else if (value < 0.6 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    DEPARTMENT_ID = colDef(show =F),
+    PROV_ID = colDef(show =F),
+    PROV_NAME_WID = colDef(show =F)
+
+  ) # Close Columns
+
+  ) # Close Reactable
+
+```
 
 
 <!-- ## Late-Releasing New Patient Block Build -->
