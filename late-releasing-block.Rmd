@@ -1433,6 +1433,14 @@ reactable(
 ## New Patients Scheduled within 14 Days
 ```{r New Patients Scheduled within 14 Days Output, echo = FALSE, warning = FALSE, message = FALSE}
 
+
+htmltools::browsable(
+  tagList(
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download Table"),
+      onclick = "Reactable.downloadDataCSV('new-pt-waitTime', 'New Patient Wait Time')"
+    ),
+    
 reactable(
   new_pt_waitTime %>%
     dplyr::select(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_ID, PROV_NAME_WID, Provider, Appt.Made.YearMonth, total_new_scheduled, Yes, No, perc_14days),
@@ -1549,6 +1557,8 @@ reactable(
   ) # Close Columns
 
   ) # Close Reactable
+) # Close Taglist
+) # Close htmltools
 
 ```
 
