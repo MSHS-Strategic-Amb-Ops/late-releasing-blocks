@@ -958,18 +958,18 @@ reactable(
       minWidth = 200),
     PROV_TYPE = colDef(
       name = "Provider Type",
-      minWidth = 130),
+      minWidth = 100),
     Provider = colDef(
       minWidth = 130),
     ACTIVE_STATUS = colDef(
       name = "Active Status",
-      minWidth = 130),
+      minWidth = 80),
     Slot.YearMonth = colDef(
       name = "Year-Month",
-      minWidth = 100),
+      minWidth = 80),
     SLOT_LENGTH = colDef(
       name = "Slot Length",
-      minWidth = 100),
+      minWidth = 80),
     
     TOTAL_BLOCKS = colDef(
       name = "Total Blocks",
@@ -1072,6 +1072,7 @@ reactable(
     ),
     
     # Specialty = colDef(show =F),
+    PROV_ID = colDef(show =F),
     DEPARTMENT_ID = colDef(show =F),
     NON_NEW_BLOCK_NON_TIME_RELEASE = colDef(show =F),
     NEW_BLOCK_TIME_RELEASE = colDef(show =F),
@@ -1152,18 +1153,18 @@ reactable(
       minWidth = 200),
     PROV_TYPE = colDef(
       name = "Provider Type",
-      minWidth = 130),
+      minWidth = 100),
     Provider = colDef(
       minWidth = 130),
     ACTIVE_STATUS = colDef(
       name = "Active Status",
-      minWidth = 130),
+      minWidth = 80),
     Slot.YearMonth = colDef(
       name = "Year-Month",
-      minWidth = 100),
+      minWidth = 80),
     SLOT_LENGTH = colDef(
       name = "Slot Length",
-      minWidth = 100),
+      minWidth = 80),
     TOTAL_BLOCKS = colDef(
       name = "Total Blocks",
       maxWidth = 100,
@@ -1253,6 +1254,7 @@ reactable(
       style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
     ),
     # Specialty = colDef(show =F),
+    PROV_ID = colDef(show =F),
     DEPARTMENT_ID = colDef(show =F),
     NON_NEW_BLOCK_NON_TIME_RELEASE = colDef(show =F),
     NEW_BLOCK_TIME_RELEASE = colDef(show =F),
