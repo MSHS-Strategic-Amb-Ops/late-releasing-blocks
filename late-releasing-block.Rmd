@@ -856,6 +856,8 @@ waitTime_date_end <- paste0(format(Sys.Date(), "%Y-%m"),"-01")
 waitTime_date_start <- as.Date(waitTime_date_end) - months(3)
 
 new_pt_waitTime <- access_raw_tbl %>%
+  left_join(clarity_ser_tbl %>% 
+              dplyr::select(PROV_ID, PROV_TYPE, ACTIVE_STATUS)) %>%
   mutate(Appt.Made.DateYear = TO_DATE(CONTACT_DATE),
          Appt.Made.Year = year(CONTACT_DATE),
          Appt.Made.Month = month(CONTACT_DATE),
@@ -866,7 +868,7 @@ new_pt_waitTime <- access_raw_tbl %>%
   # filter(wait_time >= 0) %>%
   filter(VISIT_GROUP_NUM == 4) %>%
   mutate(waitTime_14days = ifelse(wait_time <= 14, "Yes", "No")) %>%
-  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_ID, PROV_NAME_WID, Appt.Made.YearMonth, waitTime_14days) %>%
+  group_by(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_ID, PROV_NAME_WID, PROV_TYPE, ACTIVE_STATUS, Appt.Made.YearMonth, waitTime_14days) %>%
   summarise(total = n()) %>%
   collect() %>%
   pivot_wider(names_from = waitTime_14days,
@@ -1430,20 +1432,21 @@ reactable(
 <br/>
 
 
-## New Patients Scheduled within 14 Days
-```{r New Patients Scheduled within 14 Days Output, echo = FALSE, warning = FALSE, message = FALSE}
+## New Patients Scheduled within 14 Days (Physicians Only)
+```{r New Patients Scheduled within 14 Days (Physicians) Output, echo = FALSE, warning = FALSE, message = FALSE}
 
 
 htmltools::browsable(
   tagList(
     tags$button(
       tagList(fontawesome::fa("download"), "Download Table"),
-      onclick = "Reactable.downloadDataCSV('new-pt-waitTime', 'New Patient Wait Time')"
+      onclick = "Reactable.downloadDataCSV('new-pt-waitTime-physician', 'New Patient Wait Time (Physicians Only)')"
     ),
     
 reactable(
   new_pt_waitTime %>%
-    dplyr::select(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_ID, PROV_NAME_WID, Provider, Appt.Made.YearMonth, total_new_scheduled, Yes, No, perc_14days),
+    filter(PROV_TYPE == "Physician") %>%
+    dplyr::select(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_TYPE, PROV_ID, PROV_NAME_WID, Provider, Appt.Made.YearMonth, total_new_scheduled, Yes, No, perc_14days),
   elementId = "new-pt-waitTime",
   # elementId = "referral-vol-download-table",
   style = list(fontFamily = 'Calibri',
@@ -1464,10 +1467,10 @@ reactable(
     wrap = TRUE,
   searchable = TRUE,
 
-  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "Provider", "Appt.Made.YearMonth"),
+  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_TYPE", "Provider", "Appt.Made.YearMonth"),
 
   columnGroups = list(
-    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "Provider", "Appt.Made.YearMonth"),
+    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_TYPE", "Provider", "Appt.Made.YearMonth"),
              headerStyle = list(color = "black", fontSize = "15px"),
              sticky = "left"),
     colGroup(name = paste0("New Patients Scheduled ", waitTime_date_start, " - ",  as.Date(waitTime_date_end)-days(1)), 
@@ -1489,6 +1492,10 @@ reactable(
     DEPARTMENT_NAME = colDef(
       name = "Department",
       minWidth = 250),
+    
+    PROV_TYPE = colDef(
+      name = "Provider Type",
+      minWidth = 200),
     
     Provider = colDef(
       name = "Provider",
@@ -1552,7 +1559,8 @@ reactable(
     
     DEPARTMENT_ID = colDef(show =F),
     PROV_ID = colDef(show =F),
-    PROV_NAME_WID = colDef(show =F)
+    PROV_NAME_WID = colDef(show =F),
+    ACTIVE_STATUS = colDef(show =F)
 
   ) # Close Columns
 
@@ -1561,6 +1569,148 @@ reactable(
 ) # Close htmltools
 
 ```
+<br/>
+<br/>
+
+
+## New Patients Scheduled within 14 Days
+```{r New Patients Scheduled within 14 Days Output, echo = FALSE, warning = FALSE, message = FALSE}
+
+
+htmltools::browsable(
+  tagList(
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download Table"),
+      onclick = "Reactable.downloadDataCSV('new-pt-waitTime', 'New Patient Wait Time')"
+    ),
+    
+reactable(
+  new_pt_waitTime %>%
+    dplyr::select(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, DEPARTMENT_ID, PROV_TYPE, PROV_ID, PROV_NAME_WID, Provider, Appt.Made.YearMonth, total_new_scheduled, Yes, No, perc_14days),
+  elementId = "new-pt-waitTime",
+  # elementId = "referral-vol-download-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left",
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+
+  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_TYPE", "Provider", "Appt.Made.YearMonth"),
+
+  columnGroups = list(
+    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_TYPE", "Provider", "Appt.Made.YearMonth"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("New Patients Scheduled ", waitTime_date_start, " - ",  as.Date(waitTime_date_end)-days(1)), 
+             columns = c("total_new_scheduled", "Yes", "No", "perc_14days"),
+             headerStyle = list(color = "#210070", fontSize = "15px"))
+    ),
+
+  columns = list(
+
+    SITE = colDef(
+      # footer = "Total",
+      name = "Site",
+      minWidth = 180),
+
+    DEPT_SPECIALTY_NAME = colDef(
+      name = "Specialty",
+      minWidth = 250),
+    
+    DEPARTMENT_NAME = colDef(
+      name = "Department",
+      minWidth = 250),
+    
+    PROV_TYPE = colDef(
+      name = "Provider Type",
+      minWidth = 200),
+    
+    Provider = colDef(
+      name = "Provider",
+      minWidth = 200),
+    
+    Appt.Made.YearMonth = colDef(
+      name = "Year-Month",
+      minWidth = 100),
+
+    total_new_scheduled = colDef(
+      name = "New Patients Scheduled",
+      maxWidth = 100,
+      headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Yes = colDef(
+      name = "New Patients Scheduled <=14 Days",
+      maxWidth = 100,
+      headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    No = colDef(
+      name = "New Patients Scheduled >14 Days",
+      maxWidth = 100,
+      headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    perc_14days = colDef(
+      name = "% New Patients Scheduled <=14 Days",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalYes = 0
+        let totalNo = 0
+        rows.forEach(function(row) {
+          totalYes += row['Yes']
+          totalNo += row['No']
+        })
+        return (totalYes) / (totalYes + totalNo)
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['perc_14days']
+        if (value >= 0.6) {
+          var color = '#008000'
+        } else if (value < 0.6 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    DEPARTMENT_ID = colDef(show =F),
+    PROV_ID = colDef(show =F),
+    PROV_NAME_WID = colDef(show =F),
+    ACTIVE_STATUS = colDef(show =F)
+
+  ) # Close Columns
+
+  ) # Close Reactable
+) # Close Taglist
+) # Close htmltools
+
+```
+<br/>
+<br/>
 
 
 <!-- ## Late-Releasing New Patient Block Build -->
