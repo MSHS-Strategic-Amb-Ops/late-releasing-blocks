@@ -858,9 +858,9 @@ waitTime_date_start <- as.Date(waitTime_date_end) - months(3)
 new_pt_waitTime <- access_raw_tbl %>%
   left_join(clarity_ser_tbl %>% 
               dplyr::select(PROV_ID, PROV_TYPE, ACTIVE_STATUS)) %>%
-  mutate(Appt.Made.DateYear = TO_DATE(CONTACT_DATE),
-         Appt.Made.Year = year(CONTACT_DATE),
-         Appt.Made.Month = month(CONTACT_DATE),
+  mutate(Appt.Made.DateYear = TO_DATE(APPT_MADE_DATE),
+         Appt.Made.Year = year(APPT_MADE_DATE),
+         Appt.Made.Month = month(APPT_MADE_DATE),
          Appt.Made.YearMonth = paste0(Appt.Made.Year,"-",Appt.Made.Month)) %>%
   filter(Appt.Made.DateYear >= as.Date(waitTime_date_start)) %>%
   filter(Appt.Made.DateYear < as.Date(waitTime_date_end)) %>%
