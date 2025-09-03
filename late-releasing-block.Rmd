@@ -542,9 +542,9 @@ org_block_type <- block_raw_tbl_loc %>%
 
 
 block_distribution <- slot_data_prc_tbl %>%
-  # filter(PROV_ID == "1410756") %>%
-  # filter(DEPARTMENT_ID == "8827031") %>%
-  filter(year(SLOT_BEGIN_TIME) >= 2024) %>%
+  filter(PROV_ID == "1410756") %>%
+  filter(DEPARTMENT_ID == "8827031") %>%
+  filter(year(SLOT_BEGIN_TIME) == 2024) %>%
   # filter(month(SLOT_BEGIN_TIME) == 1) %>%
   left_join(org_block_type,
             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
