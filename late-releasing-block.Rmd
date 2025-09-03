@@ -548,7 +548,8 @@ block_distribution <- slot_data_prc_tbl %>%
   # filter(month(SLOT_BEGIN_TIME) == 1) %>%
   left_join(org_block_type,
             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
-  left_join(clarity_ser_tbl_loc %>% select(PROV_ID, PROV_TYPE, ACTIVE_STATUS)) %>%
+  left_join(clarity_ser_tbl_loc %>% 
+              dplyr::select(PROV_ID, PROV_TYPE, ACTIVE_STATUS)) %>%
   # filter(PROV_TYPE == "Physician") %>%
   left_join(clarity_ser_2_tbl_loc %>% 
               dplyr::select(PROV_ID, GENERIC_YN)) %>%
