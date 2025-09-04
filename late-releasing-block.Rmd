@@ -548,7 +548,7 @@ org_block_type <- block_raw_tbl_loc %>%
 block_distribution <- slot_data_prc_tbl %>%
   # filter(PROV_ID == "1410756") %>%
   # filter(DEPARTMENT_ID == "8827031") %>%
-  filter(year(SLOT_BEGIN_TIME) == 2024) %>%
+  filter(year(SLOT_BEGIN_TIME) == 2025) %>%
   # filter(month(SLOT_BEGIN_TIME) == 1) %>%
   left_join(org_block_type,
             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
@@ -607,6 +607,9 @@ block_distribution <- block_distribution %>%
             reg_openings_release_combination = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 & (BLOCK_NEW_YN == 1 | BLOCK_OTHER_YN == 1)]))
 
 block_distribution <- block_distribution %>%
+  collect()
+
+block_distribution <- block_distribution %>% 
   mutate(perc_reg_openings_new_release = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ reg_openings_new_release/reg_openings),   
          perc_release_all = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release_all/reg_openings_new_release),
          perc_release = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release/reg_openings_new_release)) %>%
@@ -614,8 +617,7 @@ block_distribution <- block_distribution %>%
          prov_util_new = case_when(avail_hour_new == 0 | is.na(avail_hour_new) ~ 0, TRUE ~ arrived_hour_new/avail_hour_new),
          prov_util_release = case_when(avail_hour_release == 0 | is.na(avail_hour_release) ~ 0, TRUE ~ arrived_hour_release/avail_hour_release),
          prov_util_other = case_when(avail_hour_other == 0 | is.na(avail_hour_other) ~ 0, TRUE ~ arrived_hour_other/avail_hour_other)) %>%
-  filter(prov_util >=0.35 & prov_util <=2.0) %>%
-  collect()
+  filter(prov_util >=0.35 & prov_util <=2.0) 
 
 
 
