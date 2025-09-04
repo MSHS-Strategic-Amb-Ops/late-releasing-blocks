@@ -548,7 +548,7 @@ org_block_type <- block_raw_tbl_loc %>%
 block_distribution <- slot_data_prc_tbl %>%
   # filter(PROV_ID == "1410756") %>%
   # filter(DEPARTMENT_ID == "8827031") %>%
-  filter(year(SLOT_BEGIN_TIME) >= 2024) %>%
+  filter(year(SLOT_BEGIN_TIME) == 2024) %>%
   # filter(month(SLOT_BEGIN_TIME) == 1) %>%
   left_join(org_block_type,
             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
@@ -579,7 +579,10 @@ block_distribution <- slot_data_prc_tbl %>%
             copy = T) %>%
   mutate(slot_year = year(SLOT_BEGIN_TIME),
          slot_month = month(SLOT_BEGIN_TIME)) %>%
-  mutate(MSHS = "MSHS") %>%
+  mutate(MSHS = "MSHS") 
+
+
+block_distribution <- block_distribution %>%
   group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS, 
            slot_year, slot_month) %>%
   summarise(avail_hour = sum(REG_AVAIL_MIN, na.rm = T)/60,
@@ -601,7 +604,9 @@ block_distribution <- slot_data_prc_tbl %>%
             reg_openings_new_normal = sum(REG_AVAIL_OPENINGS[BLOCK_NEW_YN == 1 & BLOCK_RELEASE_ALL_YN == 0 & BLOCK_OTHER_YN == 0]),
             reg_openings_new_combination = sum(REG_AVAIL_OPENINGS[BLOCK_NEW_YN == 1 & (BLOCK_RELEASE_ALL_YN == 1 | BLOCK_OTHER_YN == 1)]),
             reg_openings_release_normal = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 & BLOCK_NEW_YN == 0 & BLOCK_OTHER_YN == 0]),
-            reg_openings_release_combination = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 & (BLOCK_NEW_YN == 1 | BLOCK_OTHER_YN == 1)])) %>%
+            reg_openings_release_combination = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 & (BLOCK_NEW_YN == 1 | BLOCK_OTHER_YN == 1)]))
+
+block_distribution <- block_distribution %>%
   mutate(perc_reg_openings_new_release = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ reg_openings_new_release/reg_openings),   
          perc_release_all = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release_all/reg_openings_new_release),
          perc_release = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release/reg_openings_new_release)) %>%
