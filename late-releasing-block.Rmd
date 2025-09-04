@@ -475,8 +475,6 @@ new_blocks <- c(
   "Total Body New"
 )
 
-non_release_new_blocks <- setdiff(new_blocks, release_blocks_all)
-
 release_blocks <- c(
   "New Patient 14-Day",
   # "New Patient 21-Day",
@@ -509,6 +507,8 @@ release_blocks_all <- c(
   "PEDS DERM NEW PATIENT 28",
   "PAL CARE NEW PATIENT 7"
 )
+
+non_release_new_blocks <- setdiff(new_blocks, release_blocks_all)
 
 ```
 
