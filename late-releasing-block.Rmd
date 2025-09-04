@@ -655,7 +655,9 @@ block_error <- slot_data_prc_tbl %>%
   mutate(slot_year = year(SLOT_BEGIN_TIME),
          slot_month = month(SLOT_BEGIN_TIME)) %>%
   mutate(MSHS = "MSHS") %>%
-  mutate(incorrect_blocks = BLOCK_RELEASE_ALL_YN + BLOCK_NEW_YN + BLOCK_OTHER_YN) %>%
+  mutate(incorrect_blocks = BLOCK_RELEASE_ALL_YN + BLOCK_NEW_YN + BLOCK_OTHER_YN) 
+
+block_error <- block_error %>%
   group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
            slot_year, slot_month, SLOT_BEGIN_TIME, FINAL_BLOCKS) %>%
   summarise(reg_openings = sum(REG_AVAIL_OPENINGS),
