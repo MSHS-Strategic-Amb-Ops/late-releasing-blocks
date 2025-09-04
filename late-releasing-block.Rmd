@@ -582,52 +582,53 @@ block_distribution <- slot_data_prc_tbl %>%
   mutate(MSHS = "MSHS") 
 
 
-# block_distribution <- block_distribution %>%
-#   group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS, 
-#            slot_year, slot_month) %>%
-#   summarise(avail_hour = sum(REG_AVAIL_MIN, na.rm = T)/60,
-#             sched_hour = sum(SCHED_MIN, na.rm = T)/60,
-#             arrived_hour = sum(ARRIVED_MIN, na.rm = T)/60,
-#             avail_hour_new = sum(REG_AVAIL_MIN[BLOCK_NEW_YN == 1])/60,
-#             sched_hour_new = sum(SCHED_MIN[BLOCK_NEW_YN == 1], na.rm = T)/60,
-#             arrived_hour_new = sum(ARRIVED_MIN[BLOCK_NEW_YN == 1], na.rm = T)/60,
-#             avail_hour_release = sum(REG_AVAIL_MIN[BLOCK_RELEASE_ALL_YN == 1])/60,
-#             sched_hour_release = sum(SCHED_MIN[BLOCK_RELEASE_ALL_YN == 1], na.rm = T)/60,
-#             arrived_hour_release = sum(ARRIVED_MIN[BLOCK_RELEASE_ALL_YN == 1], na.rm = T)/60,
-#             avail_hour_other = sum(REG_AVAIL_MIN[BLOCK_OTHER_YN == 1])/60,
-#             sched_hour_other = sum(SCHED_MIN[BLOCK_OTHER_YN == 1], na.rm = T)/60,
-#             arrived_hour_other = sum(ARRIVED_MIN[BLOCK_OTHER_YN == 1], na.rm = T)/60,
-#             reg_openings = sum(REG_AVAIL_OPENINGS),
-#             reg_openings_new_release = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 | BLOCK_NEW_YN == 1]),
-#             reg_openings_release_all = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1]),
-#             reg_openings_release = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_YN == 1]),
-#             reg_openings_new_normal = sum(REG_AVAIL_OPENINGS[BLOCK_NEW_YN == 1 & BLOCK_RELEASE_ALL_YN == 0 & BLOCK_OTHER_YN == 0]),
-#             reg_openings_new_combination = sum(REG_AVAIL_OPENINGS[BLOCK_NEW_YN == 1 & (BLOCK_RELEASE_ALL_YN == 1 | BLOCK_OTHER_YN == 1)]),
-#             reg_openings_release_normal = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 & BLOCK_NEW_YN == 0 & BLOCK_OTHER_YN == 0]),
-#             reg_openings_release_combination = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 & (BLOCK_NEW_YN == 1 | BLOCK_OTHER_YN == 1)]))
-# 
-# block_distribution <- block_distribution %>%
-#   collect()
-# 
-# block_distribution <- block_distribution %>% 
-#   mutate(perc_reg_openings_new_release = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ reg_openings_new_release/reg_openings),   
-#          perc_release_all = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release_all/reg_openings_new_release),
-#          perc_release = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release/reg_openings_new_release)) %>%
-#   mutate(prov_util = case_when(avail_hour == 0 | is.na(avail_hour) ~ 0, TRUE ~ arrived_hour/avail_hour),
-#          prov_util_new = case_when(avail_hour_new == 0 | is.na(avail_hour_new) ~ 0, TRUE ~ arrived_hour_new/avail_hour_new),
-#          prov_util_release = case_when(avail_hour_release == 0 | is.na(avail_hour_release) ~ 0, TRUE ~ arrived_hour_release/avail_hour_release),
-#          prov_util_other = case_when(avail_hour_other == 0 | is.na(avail_hour_other) ~ 0, TRUE ~ arrived_hour_other/avail_hour_other)) %>%
-#   filter(prov_util >=0.35 & prov_util <=2.0) 
-# 
-# 
-# 
+block_distribution <- block_distribution %>%
+  group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
+           slot_year, slot_month) %>%
+  summarise(avail_hour = sum(REG_AVAIL_MIN, na.rm = T)/60,
+            sched_hour = sum(SCHED_MIN, na.rm = T)/60,
+            arrived_hour = sum(ARRIVED_MIN, na.rm = T)/60,
+            avail_hour_new = sum(REG_AVAIL_MIN[BLOCK_NEW_YN == 1])/60,
+            sched_hour_new = sum(SCHED_MIN[BLOCK_NEW_YN == 1], na.rm = T)/60,
+            arrived_hour_new = sum(ARRIVED_MIN[BLOCK_NEW_YN == 1], na.rm = T)/60,
+            avail_hour_release = sum(REG_AVAIL_MIN[BLOCK_RELEASE_ALL_YN == 1])/60,
+            sched_hour_release = sum(SCHED_MIN[BLOCK_RELEASE_ALL_YN == 1], na.rm = T)/60,
+            arrived_hour_release = sum(ARRIVED_MIN[BLOCK_RELEASE_ALL_YN == 1], na.rm = T)/60,
+            avail_hour_other = sum(REG_AVAIL_MIN[BLOCK_OTHER_YN == 1])/60,
+            sched_hour_other = sum(SCHED_MIN[BLOCK_OTHER_YN == 1], na.rm = T)/60,
+            arrived_hour_other = sum(ARRIVED_MIN[BLOCK_OTHER_YN == 1], na.rm = T)/60,
+            reg_openings = sum(REG_AVAIL_OPENINGS),
+            reg_openings_new_release = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 | BLOCK_NEW_YN == 1]),
+            reg_openings_release_all = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1]),
+            reg_openings_release = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_YN == 1]),
+            reg_openings_new_normal = sum(REG_AVAIL_OPENINGS[BLOCK_NEW_YN == 1 & BLOCK_RELEASE_ALL_YN == 0 & BLOCK_OTHER_YN == 0]),
+            reg_openings_new_combination = sum(REG_AVAIL_OPENINGS[BLOCK_NEW_YN == 1 & (BLOCK_RELEASE_ALL_YN == 1 | BLOCK_OTHER_YN == 1)]),
+            reg_openings_release_normal = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 & BLOCK_NEW_YN == 0 & BLOCK_OTHER_YN == 0]),
+            reg_openings_release_combination = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 & (BLOCK_NEW_YN == 1 | BLOCK_OTHER_YN == 1)]))
+
+block_distribution <- block_distribution %>%
+  collect()
+
+block_distribution <- block_distribution %>%
+  mutate(perc_reg_openings_new_release = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ reg_openings_new_release/reg_openings),
+         perc_release_all = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release_all/reg_openings_new_release),
+         perc_release = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release/reg_openings_new_release)) %>%
+  mutate(prov_util = case_when(avail_hour == 0 | is.na(avail_hour) ~ 0, TRUE ~ arrived_hour/avail_hour),
+         prov_util_new = case_when(avail_hour_new == 0 | is.na(avail_hour_new) ~ 0, TRUE ~ arrived_hour_new/avail_hour_new),
+         prov_util_release = case_when(avail_hour_release == 0 | is.na(avail_hour_release) ~ 0, TRUE ~ arrived_hour_release/avail_hour_release),
+         prov_util_other = case_when(avail_hour_other == 0 | is.na(avail_hour_other) ~ 0, TRUE ~ arrived_hour_other/avail_hour_other)) %>%
+  filter(prov_util >=0.35 & prov_util <=2.0)
+
+
+
 # block_error <- slot_data_prc_tbl %>%
+#   filter(year(SLOT_BEGIN_TIME) == 2025) %>%
 #   filter(SLOT_BEGIN_TIME >= TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
 #   # filter(PROV_ID == "1410756") %>%
 #   # filter(DEPARTMENT_ID == "8827031") %>%
 #   left_join(org_block_type,
 #             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
-#   left_join(clarity_ser_tbl_loc %>% 
+#   left_join(clarity_ser_tbl_loc %>%
 #               dplyr::select(PROV_ID, PROV_TYPE, ACTIVE_STATUS)) %>%
 #   # filter(PROV_TYPE == "Physician") %>%
 #   left_join(clarity_ser_2_tbl_loc %>%
@@ -655,7 +656,7 @@ block_distribution <- slot_data_prc_tbl %>%
 #   mutate(slot_year = year(SLOT_BEGIN_TIME),
 #          slot_month = month(SLOT_BEGIN_TIME)) %>%
 #   mutate(MSHS = "MSHS") %>%
-#   mutate(incorrect_blocks = BLOCK_RELEASE_ALL_YN + BLOCK_NEW_YN + BLOCK_OTHER_YN) 
+#   mutate(incorrect_blocks = BLOCK_RELEASE_ALL_YN + BLOCK_NEW_YN + BLOCK_OTHER_YN)
 # 
 # block_error <- block_error %>%
 #   group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
