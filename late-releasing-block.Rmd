@@ -513,7 +513,7 @@ release_blocks_all <- c(
 ```
 
 
-```{r Template Utilization Updated, echo = FALSE, warning = FALSE, message = FALSE}
+```{r Process slot data, echo = FALSE, warning = FALSE, message = FALSE}
 
 
 org_block_type <- block_raw_tbl_loc %>%
@@ -542,6 +542,11 @@ org_block_type <- block_raw_tbl_loc %>%
          BLOCK_NEW_YN = case_when(BLOCK_NEW_NUM>0 ~ 1, TRUE ~ 0), 
          BLOCK_OTHER_YN = case_when(BLOCK_OTHER_NUM>0 ~ 1, TRUE ~ 0)) 
 
+
+
+check <- slot_data_prc_tbl %>%
+  head(10) %>%
+  collect()
 
 
 block_distribution <- slot_data_prc_tbl %>%
@@ -666,14 +671,14 @@ knitr::include_graphics("Mount_Sinai_Logo_H.png")
 ```
 
 
-# Template Blocks Report {.tabset .tabset-fade .tabset-pills}
+# Template Block Usage Report {.tabset .tabset-fade .tabset-pills}
 *Report run date: `r report_run_date`*<br/>
 ______________________________________________________________________________________________________________________________
 <br/>
 <br/>
 
 ## Block Distribution (Physicians Only)
-```{r Block Conversion Output (block Count), echo = FALSE, warning = FALSE, message = FALSE}
+```{r Block Usage (Physicians), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
   tagList(
@@ -956,7 +961,7 @@ reactable(
 
 
 ## Block Distribution (All Providers)
-```{r Block Conversion Output (block Count), echo = FALSE, warning = FALSE, message = FALSE}
+```{r Block Usage (All), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
   tagList(
@@ -1239,7 +1244,7 @@ reactable(
 
 
 ## Combination Blocks (Physicians Only)
-```{r Block Conversion Output (block Count), echo = FALSE, warning = FALSE, message = FALSE}
+```{r Combination Blocks (Physicians), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
   tagList(
@@ -1266,6 +1271,149 @@ reactable(
     filter(PROV_TYPE == "Physician") %>%
     mutate(SLOT_BEGIN_TIME = as.character(SLOT_BEGIN_TIME)),
   elementId = "combination-blocks-physician",
+  # elementId = "cars-grouping-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left",
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+
+  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year", "slot_month", "PROV_NM_WID"),
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year", "slot_month", "PROV_NM_WID", "PROV_TYPE", "ACTIVE_STATUS",
+                                    "SLOT_BEGIN_TIME", "FINAL_BLOCKS"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Total Openings"),
+             columns = c("reg_openings", "incorrect_openings", "perc_incorrect_openings"),
+             headerStyle = list(background = "#212070", color = "white", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    SITE = colDef(
+      name = "Site",
+      minWidth = 150),
+    
+    DEPT_SPECIALTY_NAME = colDef(
+      name = "Specialty",
+      minWidth = 180),
+    
+    DEPARTMENT_NAME = colDef(
+      name = "Department",
+      minWidth = 180),
+    
+    PROV_TYPE = colDef(
+      name = "Provider Type",
+      minWidth = 100),
+    
+    PROV_NM_WID = colDef(
+      name = "Provider",
+      minWidth = 150),
+    
+    ACTIVE_STATUS = colDef(
+      name = "Provider Status",
+      minWidth = 80),
+    
+    slot_year = colDef(
+      name = "Year",
+      minWidth = 80),
+    
+    slot_month = colDef(
+      name = "Month",
+      minWidth = 80),
+    
+    SLOT_BEGIN_TIME = colDef(
+      name = "Date and Time",
+      minWidth = 180),
+    
+    FINAL_BLOCKS = colDef(
+      name = "Blocks Assigned",
+      minWidth = 250),
+    
+    reg_openings = colDef(
+      name = "Total Openings",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px")),
+  
+    incorrect_openings = colDef(
+      name = "Combination Block Openings",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px")),
+
+  
+    perc_incorrect_openings = colDef(
+      name = "% Combination Block Openings",
+      maxWidth = 200,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalreg_openings = 0
+        let totalincorrect_openings = 0
+        rows.forEach(function(row) {
+          totalreg_openings += row['reg_openings']
+          totalincorrect_openings += row['incorrect_openings']
+        })
+        return (totalincorrect_openings) / (totalreg_openings) || '-'
+      }"),
+      format = colFormat(percent = TRUE, digits = 1)
+    ),
+
+    PROV_ID = colDef(show =F),
+    DEPARTMENT_ID = colDef(show =F),
+    reg_openings_new = colDef(show =F),
+    reg_openings_release = colDef(show =F),
+    reg_openings_other = colDef(show =F)
+  ) # Close Columns
+  ) # Close Reactable
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+## Combination Blocks (All Providers)
+```{r Combination Blocks (All), echo = FALSE, warning = FALSE, message = FALSE}
+# Table Output -----------------------------------------------------------------
+htmltools::browsable(
+  tagList(
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download Table"),
+      onclick = "Reactable.downloadDataCSV('combination-blocks', 'Block Combinations')"
+    ),
+# htmltools::browsable(
+#   tagList(
+#     div(tags$label("Group by", `for` = "cars-grouping-select")),
+#     tags$select(
+#       id = "cars-grouping-select",
+#       onchange = "Reactable.setGroupBy('cars-grouping-table', this.value ? [this.value] : [])",
+#       tags$option("None", value = c("Campus","Campus.Specialty.Group")),
+#       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")),
+#       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#       lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#     ),
+#
+#     tags$hr("aria-hidden" = "true"),
+reactable(
+  block_error %>%
+    arrange(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month, SLOT_BEGIN_TIME) %>%
+    filter(PROV_TYPE == "Physician") %>%
+    mutate(SLOT_BEGIN_TIME = as.character(SLOT_BEGIN_TIME)),
+  elementId = "combination-blocks",
   # elementId = "cars-grouping-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
