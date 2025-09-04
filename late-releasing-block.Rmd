@@ -695,6 +695,7 @@ htmltools::browsable(
 #     tags$hr("aria-hidden" = "true"),
 reactable(
   block_distribution %>%
+    arrange(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month)
     filter(PROV_TYPE == "Physician"),
   elementId = "block-distribution-physician",
   # elementId = "cars-grouping-table",
@@ -840,36 +841,42 @@ reactable(
       name = "All",
       aggregate = 'sum',
       minWidth = 80,
+      format = colFormat(separators = TRUE),
       headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px")),
 
     reg_openings_new_release = colDef(
       name = "Non-Late-Releasing & Late-Releasing New",
       aggregate = 'sum',
       minWidth = 80,
+      format = colFormat(separators = TRUE),
       headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px")),
 
     reg_openings_new_normal = colDef(
       name = "Individual Non-Late-Releasing",
       aggregate = 'sum',
       minWidth = 80,
+      format = colFormat(separators = TRUE),
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px")),
 
     reg_openings_new_combination = colDef(
       name = "Combination Non-Late-Releasing",
       aggregate = 'sum',
       minWidth = 80,
+      format = colFormat(separators = TRUE),
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px")),
 
     reg_openings_release_normal = colDef(
       name = "Individual Late-Releasing",
       aggregate = 'sum',
       minWidth = 80,
+      format = colFormat(separators = TRUE),
       headerStyle = list(background = "#A20869", color = "white", fontWeight = "Bold", fontSize = "14px")),
 
     reg_openings_release_combination = colDef(
       name = "Combination Late-Releasing",
       aggregate = 'sum',
       minWidth = 80,
+      format = colFormat(separators = TRUE),
       headerStyle = list(background = "#A20869", color = "white", fontWeight = "Bold", fontSize = "14px")),
 
     perc_reg_openings_new_release = colDef(
