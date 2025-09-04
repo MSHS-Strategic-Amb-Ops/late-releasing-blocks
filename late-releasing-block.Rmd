@@ -695,7 +695,7 @@ htmltools::browsable(
 #     tags$hr("aria-hidden" = "true"),
 reactable(
   block_distribution %>%
-    arrange(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month)
+    arrange(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month) %>%
     filter(PROV_TYPE == "Physician"),
   elementId = "block-distribution-physician",
   # elementId = "cars-grouping-table",
