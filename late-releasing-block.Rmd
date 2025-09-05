@@ -1434,7 +1434,7 @@ reactable(
   block_error %>%
     mutate(slot_week = as.character(slot_week),
            slot_month = as.numeric(slot_month)) %>%
-    arrange(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month, slot_week, slot_day) %>%
+    arrange(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month, slot_week, slot_day),
     # filter(PROV_TYPE == "Physician"),
   elementId = "combination-blocks-physician",
   # elementId = "cars-grouping-table",
