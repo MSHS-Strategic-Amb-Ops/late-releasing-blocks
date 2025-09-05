@@ -394,7 +394,7 @@ visitFact_conn <- tbl(conn5, dbplyr::ident_q('"Caboodle"."VisitFact"'))
 
 report_run_date <- Sys.Date()
 date_start <- format(Sys.Date(), "%Y-%m-%d")
-# date_start <- paste0(format(Sys.Date(), "%Y-%m"),"-01")
+date_start_next30 <- format(Sys.Date() + 30, "%Y-%m-%d")
 
 current_year <- format(report_run_date, "%Y")
 prior_year <- as.character(as.numeric(current_year) -2)
@@ -402,6 +402,8 @@ prior_year <- as.character(as.numeric(current_year) -2)
 current_month <- format(report_run_date, "%m")
 
 current_year_month <- paste0(current_year,"-",current_month)
+
+
 ```
 
 
@@ -515,7 +517,7 @@ non_release_new_blocks <- setdiff(new_blocks, release_blocks_all)
 
 ```{r Process slot data, echo = FALSE, warning = FALSE, message = FALSE}
 
-
+# Block Usage ------------------------------------------------------------------
 org_block_type <- block_raw_tbl_loc %>%
   left_join(block_name_tbl_loc %>% 
               dplyr::select(APPT_BLOCK_C, NAME) %>%
@@ -604,10 +606,9 @@ block_distribution <- block_distribution %>%
             reg_openings_new_normal = sum(REG_AVAIL_OPENINGS[BLOCK_NEW_YN == 1 & BLOCK_RELEASE_ALL_YN == 0 & BLOCK_OTHER_YN == 0]),
             reg_openings_new_combination = sum(REG_AVAIL_OPENINGS[BLOCK_NEW_YN == 1 & (BLOCK_RELEASE_ALL_YN == 1 | BLOCK_OTHER_YN == 1)]),
             reg_openings_release_normal = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 & BLOCK_NEW_YN == 0 & BLOCK_OTHER_YN == 0]),
-            reg_openings_release_combination = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 & (BLOCK_NEW_YN == 1 | BLOCK_OTHER_YN == 1)]))
-
-block_distribution <- block_distribution %>%
+            reg_openings_release_combination = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 & (BLOCK_NEW_YN == 1 | BLOCK_OTHER_YN == 1)])) %>%
   collect()
+
 
 block_distribution <- block_distribution %>%
   mutate(perc_reg_openings_new_release = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ reg_openings_new_release/reg_openings),
@@ -617,10 +618,14 @@ block_distribution <- block_distribution %>%
          prov_util_new = case_when(avail_hour_new == 0 | is.na(avail_hour_new) ~ 0, TRUE ~ arrived_hour_new/avail_hour_new),
          prov_util_release = case_when(avail_hour_release == 0 | is.na(avail_hour_release) ~ 0, TRUE ~ arrived_hour_release/avail_hour_release),
          prov_util_other = case_when(avail_hour_other == 0 | is.na(avail_hour_other) ~ 0, TRUE ~ arrived_hour_other/avail_hour_other)) %>%
-  filter(prov_util >=0.35 & prov_util <=2.0)
+  filter(prov_util >=0.35 & prov_util <=2.0) %>%
+  mutate(slot_year_month = as.character(paste0(slot_year, "-", ifelse(nchar(slot_month)==1,paste0("0",slot_month), slot_month))),
+           slot_month = as.numeric(slot_month))  %>%
+  relocate(slot_year_month, .after = slot_month)
 
 
 
+# Individual/Combination Blocks ------------------------------------------------
 block_error <- slot_data_prc_tbl %>%
   filter(year(SLOT_BEGIN_TIME) == current_year) %>%
   filter(SLOT_BEGIN_TIME >= TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
@@ -672,7 +677,84 @@ block_error <- block_error %>%
             incorrect_openings = sum(REG_AVAIL_OPENINGS[incorrect_blocks > 1])) %>%
   ungroup() %>%
   mutate(perc_incorrect_openings = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ incorrect_openings/reg_openings)) %>%
-  collect()
+  collect() %>%
+  mutate(slot_year_month = as.character(paste0(slot_year, "-", ifelse(nchar(slot_month)==1,paste0("0",slot_month), slot_month))),
+           slot_week = as.character(slot_week),
+           slot_month = as.numeric(slot_month))
+
+
+
+# # Open Slots in next 30 days ---------------------------------------------------
+# open_slots <- slot_data_prc_tbl %>%
+#   filter(year(SLOT_BEGIN_TIME) == current_year) %>%
+#   filter(SLOT_BEGIN_TIME > TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
+#   filter(SLOT_BEGIN_TIME <= TO_DATE(date_start_next30, "YYYY-MM-DD HH24:MI:SS")) %>%
+#   filter(PROV_ID == "1410756") %>%
+#   filter(DEPARTMENT_ID == "8827031") %>%
+#   left_join(org_block_type,
+#             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
+#   left_join(clarity_ser_tbl_loc %>%
+#               dplyr::select(PROV_ID, PROV_TYPE, ACTIVE_STATUS)) %>%
+#   # filter(PROV_TYPE == "Physician") %>%
+#   left_join(clarity_ser_2_tbl_loc %>%
+#               dplyr::select(PROV_ID, GENERIC_YN)) %>%
+#   filter(GENERIC_YN == "N" |  is.na(GENERIC_YN)) %>%
+#   left_join(dep_mapping_tbl_loc %>%
+#               mutate(SITE = case_when(RPT_GRP_SEVNTEEN_C == 2 ~ "NETWORK",
+#                                       RPT_GRP_SEVNTEEN_C == 3 ~ "OTHER",
+#                                       RPT_GRP_SEVNTEEN_C == 4 ~ "MSH-MSDFP",
+#                                       RPT_GRP_SEVNTEEN_C == 6 ~ "MSUS",
+#                                       RPT_GRP_SEVNTEEN_C == 7 ~ "MSDMG",
+#                                       RPT_GRP_SEVNTEEN_C == 8 ~ "MSBI",
+#                                       RPT_GRP_SEVNTEEN_C == 9 ~ "MSW",
+#                                       RPT_GRP_SEVNTEEN_C == 10 ~ "MSHS",
+#                                       RPT_GRP_SEVNTEEN_C == 11 ~ "MSM",
+#                                       RPT_GRP_SEVNTEEN_C == 12 ~ "MSH- AMBULATORY CARE",
+#                                       RPT_GRP_SEVNTEEN_C == 13 ~ "NYEE",
+#                                       RPT_GRP_SEVNTEEN_C == 14 ~ "MS NOW",
+#                                       RPT_GRP_SEVNTEEN_C == 15 ~ "MSQ",
+#                                       RPT_GRP_SEVNTEEN_C == 19 ~ "MSSN",
+#                                       RPT_GRP_SEVNTEEN_C == 38 ~ "MSB")) %>%
+#               dplyr::select(SITE, SPECIALTY, DEPARTMENT_ID) %>%
+#               rename("DEPT_SPECIALTY_NAME" = SPECIALTY),
+#             copy = T) %>%
+#   mutate(slot_year = year(SLOT_BEGIN_TIME),
+#          slot_month = month(SLOT_BEGIN_TIME)) %>%
+#   mutate(slot_date = sql("TRUNC(SLOT_BEGIN_TIME)"),
+#          slot_week = sql("TRUNC(SLOT_BEGIN_TIME, 'IW')"),
+#          slot_day_num = sql("TO_CHAR(SLOT_BEGIN_TIME, 'D')"),
+#          slot_day = sql("TO_CHAR(SLOT_BEGIN_TIME, 'DY')")) %>%
+#   mutate(MSHS = "MSHS") 
+# 
+# 
+# open_slots_summary <- open_slots %>%
+#   group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
+#            slot_year, slot_month, slot_date) %>%
+#   summarise(reg_openings = sum(REG_AVAIL_OPENINGS),
+#             sched_num = sum(SCHED_NUM),
+#             avail_min = sum(REG_AVAIL_MIN),
+#             sched_min = sum(SCHED_MIN)) %>%
+#   mutate(perc_open = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ sched_num/reg_openings)) %>%
+#   collect() %>%
+#   mutate(slot_year_month = as.character(paste0(slot_year, "-", ifelse(nchar(slot_month)==1,paste0("0",slot_month), slot_month))),
+#            slot_month = as.numeric(slot_month))
+# 
+# 
+# open_slots_detail <- open_slots %>%
+#   group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
+#            slot_year, slot_month, slot_date, SLOT_BEGIN_TIME, FINAL_BLOCKS) %>%
+#   mutate(reg_openings = sum(REG_AVAIL_OPENINGS),
+#             sched_num = sum(SCHED_NUM),
+#             avail_min = sum(REG_AVAIL_MIN),
+#             sched_min = sum(SCHED_MIN)) %>%
+#   filter((reg_openings-sched_num)>0) %>%
+#   dplyr::select(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
+#            slot_year, slot_month, slot_date, SLOT_BEGIN_TIME, FINAL_BLOCKS, SLOT_LENGTH, REG_AVAIL_OPENINGS, sched_num, REG_AVAIL_MIN, SCHED_MIN) %>%
+#   collect() %>%
+#   mutate(slot_year_month = as.character(paste0(slot_year, "-", ifelse(nchar(slot_month)==1,paste0("0",slot_month), slot_month))),
+#            slot_month = as.numeric(slot_month))
+  
+
 
 ```
 
@@ -697,19 +779,19 @@ htmltools::browsable(
       tagList(fontawesome::fa("download"), "Download Table"),
       onclick = "Reactable.downloadDataCSV('block-distribution-physician', 'Template Block Distribution')"
     ),
+
 # htmltools::browsable(
 #   tagList(
-#     div(tags$label("Group by", `for` = "cars-grouping-select")),
+#     div(tags$label("Group by", `for` = "block-distribution-physician")),
 #     tags$select(
-#       id = "cars-grouping-select",
-#       onchange = "Reactable.setGroupBy('cars-grouping-table', this.value ? [this.value] : [])",
-#       tags$option("None", value = c("Campus","Campus.Specialty.Group")),
+#       id = "block-distribution-physician",
+#       onchange = "Reactable.setGroupBy('block-distribution-physician', this.value ? [this.value] : [])",
+#       tags$option("None", value = c("SITE","slot_year_month")),
 #       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")),
 #       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
-#       lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#       lapply(c("Site", "Year-Month"), tags$option)
 #     ),
-#
-#     tags$hr("aria-hidden" = "true"),
+    
 reactable(
   block_distribution %>%
     arrange(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month) %>%
@@ -732,7 +814,7 @@ reactable(
   groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_TYPE"),
   
   columnGroups = list(
-    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_NM_WID", "PROV_TYPE", "ACTIVE_STATUS", "slot_year", "slot_month"),
+    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_NM_WID", "PROV_TYPE", "ACTIVE_STATUS", "slot_year_month"),
              headerStyle = list(color = "black", fontSize = "15px"),
              sticky = "left"),
     colGroup(name = paste0("Total Openings"),
@@ -775,12 +857,8 @@ reactable(
       name = "Provider Status",
       minWidth = 80),
     
-    slot_year = colDef(
-      name = "Year",
-      minWidth = 80),
-    
-    slot_month = colDef(
-      name = "Month",
+    slot_year_month = colDef(
+      name = "Year-Month",
       minWidth = 80),
     
     reg_openings = colDef(
@@ -929,7 +1007,7 @@ reactable(
     ),
     
     prov_util_other = colDef(
-      name = "Individual/ Combination Late-Releasing Other",
+      name = "Individual/ Combination Other",
       maxWidth = 100,
       headerStyle = list(background = "#7f7f7f", color = "white", fontWeight = "Bold", fontSize = "14px"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
@@ -947,6 +1025,8 @@ reactable(
 
     PROV_ID = colDef(show =F),
     DEPARTMENT_ID = colDef(show =F),
+    slot_year = colDef(show =F),
+    slot_month = colDef(show =F),
     avail_hour = colDef(show =F),
     sched_hour = colDef(show =F),
     arrived_hour = colDef(show =F),
@@ -982,22 +1062,22 @@ htmltools::browsable(
       tagList(fontawesome::fa("download"), "Download Table"),
       onclick = "Reactable.downloadDataCSV('block-distribution', 'Template Block Distribution')"
     ),
+
 # htmltools::browsable(
 #   tagList(
-#     div(tags$label("Group by", `for` = "cars-grouping-select")),
+#     div(tags$label("Group by", `for` = "block-distribution-physician")),
 #     tags$select(
-#       id = "cars-grouping-select",
-#       onchange = "Reactable.setGroupBy('cars-grouping-table', this.value ? [this.value] : [])",
-#       tags$option("None", value = c("Campus","Campus.Specialty.Group")),
+#       id = "block-distribution-physician",
+#       onchange = "Reactable.setGroupBy('block-distribution-physician', this.value ? [this.value] : [])",
+#       tags$option("None", value = c("SITE","slot_year_month")),
 #       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")),
 #       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
-#       lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#       lapply(c("Site", "Year-Month"), tags$option)
 #     ),
-#
-#     tags$hr("aria-hidden" = "true"),
+    
 reactable(
   block_distribution %>%
-    arrange(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month), 
+    arrange(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month),
     # filter(PROV_TYPE == "Physician"),
   elementId = "block-distribution",
   # elementId = "cars-grouping-table",
@@ -1017,7 +1097,7 @@ reactable(
   groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_TYPE"),
   
   columnGroups = list(
-    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_NM_WID", "PROV_TYPE", "ACTIVE_STATUS", "slot_year", "slot_month"),
+    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_NM_WID", "PROV_TYPE", "ACTIVE_STATUS", "slot_year_month"),
              headerStyle = list(color = "black", fontSize = "15px"),
              sticky = "left"),
     colGroup(name = paste0("Total Openings"),
@@ -1060,12 +1140,8 @@ reactable(
       name = "Provider Status",
       minWidth = 80),
     
-    slot_year = colDef(
-      name = "Year",
-      minWidth = 80),
-    
-    slot_month = colDef(
-      name = "Month",
+    slot_year_month = colDef(
+      name = "Year-Month",
       minWidth = 80),
     
     reg_openings = colDef(
@@ -1214,7 +1290,7 @@ reactable(
     ),
     
     prov_util_other = colDef(
-      name = "Individual/ Combination Late-Releasing Other",
+      name = "Individual/ Combination Other",
       maxWidth = 100,
       headerStyle = list(background = "#7f7f7f", color = "white", fontWeight = "Bold", fontSize = "14px"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
@@ -1232,6 +1308,8 @@ reactable(
 
     PROV_ID = colDef(show =F),
     DEPARTMENT_ID = colDef(show =F),
+    slot_year = colDef(show =F),
+    slot_month = colDef(show =F),
     avail_hour = colDef(show =F),
     sched_hour = colDef(show =F),
     arrived_hour = colDef(show =F),
@@ -1250,6 +1328,7 @@ reactable(
   ) # Close Reactable
  )
 )
+
 
 ```
 <br/>
@@ -1282,9 +1361,7 @@ htmltools::browsable(
 #     tags$hr("aria-hidden" = "true"),
 reactable(
   block_error %>%
-    mutate(slot_week = as.character(slot_week),
-           slot_month = as.numeric(slot_month)) %>%
-    arrange(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month, slot_week, slot_day) %>%
+    arrange(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year_month, slot_week, slot_day) %>%
     filter(PROV_TYPE == "Physician"),
   elementId = "combination-blocks-physician",
   # elementId = "cars-grouping-table",
@@ -1301,10 +1378,10 @@ reactable(
     wrap = TRUE,
   searchable = TRUE,
 
-  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year", "slot_month", "PROV_NM_WID"),
+  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year_month", "PROV_NM_WID"),
 
   columnGroups = list(
-    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year", "slot_month", "PROV_NM_WID", "PROV_TYPE", "ACTIVE_STATUS",
+    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year_month", "PROV_NM_WID", "PROV_TYPE", "ACTIVE_STATUS",
                                     "slot_week", "slot_day", "FINAL_BLOCKS"),
              headerStyle = list(color = "black", fontSize = "15px"),
              sticky = "left"),
@@ -1339,12 +1416,8 @@ reactable(
       name = "Provider Status",
       minWidth = 80),
 
-    slot_year = colDef(
-      name = "Year",
-      minWidth = 80),
-
-    slot_month = colDef(
-      name = "Month",
+    slot_year_month = colDef(
+      name = "Year-Month",
       minWidth = 80),
 
     slot_week = colDef(
@@ -1394,6 +1467,8 @@ reactable(
 
     PROV_ID = colDef(show =F),
     DEPARTMENT_ID = colDef(show =F),
+    slot_year = colDef(show =F),
+    slot_month = colDef(show =F),
     slot_day_num = colDef(show =F),
     reg_openings_new = colDef(show =F),
     reg_openings_release = colDef(show =F),
@@ -1432,11 +1507,9 @@ htmltools::browsable(
 #     tags$hr("aria-hidden" = "true"),
 reactable(
   block_error %>%
-    mutate(slot_week = as.character(slot_week),
-           slot_month = as.numeric(slot_month)) %>%
-    arrange(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month, slot_week, slot_day),
+    arrange(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year_month, slot_week, slot_day),
     # filter(PROV_TYPE == "Physician"),
-  elementId = "combination-blocks-physician",
+  elementId = "combination-blocks",
   # elementId = "cars-grouping-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
@@ -1451,10 +1524,10 @@ reactable(
     wrap = TRUE,
   searchable = TRUE,
 
-  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year", "slot_month", "PROV_NM_WID"),
+  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year_month", "PROV_NM_WID"),
 
   columnGroups = list(
-    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year", "slot_month", "PROV_NM_WID", "PROV_TYPE", "ACTIVE_STATUS",
+    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year_month", "PROV_NM_WID", "PROV_TYPE", "ACTIVE_STATUS",
                                     "slot_week", "slot_day", "FINAL_BLOCKS"),
              headerStyle = list(color = "black", fontSize = "15px"),
              sticky = "left"),
@@ -1489,12 +1562,8 @@ reactable(
       name = "Provider Status",
       minWidth = 80),
 
-    slot_year = colDef(
-      name = "Year",
-      minWidth = 80),
-
-    slot_month = colDef(
-      name = "Month",
+    slot_year_month = colDef(
+      name = "Year-Month",
       minWidth = 80),
 
     slot_week = colDef(
@@ -1544,6 +1613,8 @@ reactable(
 
     PROV_ID = colDef(show =F),
     DEPARTMENT_ID = colDef(show =F),
+    slot_year = colDef(show =F),
+    slot_month = colDef(show =F),
     slot_day_num = colDef(show =F),
     reg_openings_new = colDef(show =F),
     reg_openings_release = colDef(show =F),
@@ -1552,6 +1623,7 @@ reactable(
   ) # Close Reactable
  )
 )
+
 ```
 <br/>
 <br/>
