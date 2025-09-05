@@ -655,6 +655,9 @@ block_distribution <- block_distribution %>%
 #             copy = T) %>%
 #   mutate(slot_year = year(SLOT_BEGIN_TIME),
 #          slot_month = month(SLOT_BEGIN_TIME)) %>%
+#   mutate(slot_date = sql("TRUNC(SLOT_BEGIN_TIME)"),
+#          slot_week = sql("TRUNC(SLOT_BEGIN_TIME, 'IW')"),
+#          slot_day = sql("TO_CHAR(SLOT_BEGIN_TIME, 'D')")) %>%
 #   mutate(MSHS = "MSHS") %>%
 #   mutate(incorrect_blocks = BLOCK_RELEASE_ALL_YN + BLOCK_NEW_YN + BLOCK_OTHER_YN)
 # 
