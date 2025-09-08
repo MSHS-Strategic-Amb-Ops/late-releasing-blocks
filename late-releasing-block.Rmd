@@ -395,6 +395,7 @@ visitFact_conn <- tbl(conn5, dbplyr::ident_q('"Caboodle"."VisitFact"'))
 report_run_date <- Sys.Date()
 date_start <- format(Sys.Date(), "%Y-%m-%d")
 date_start_next30 <- format(Sys.Date() + 30, "%Y-%m-%d")
+date_start_next90 <- format(Sys.Date() + 90, "%Y-%m-%d")
 
 current_year <- format(report_run_date, "%Y")
 prior_year <- as.character(as.numeric(current_year) -2)
@@ -548,8 +549,8 @@ org_block_type <- block_raw_tbl_loc %>%
 
 
 block_distribution <- slot_data_prc_tbl %>%
-  # filter(PROV_ID == "1410756") %>%
-  # filter(DEPARTMENT_ID == "8827031") %>%
+  filter(PROV_ID == "1410756") %>%
+  filter(DEPARTMENT_ID == "8827031") %>%
   filter(year(SLOT_BEGIN_TIME) == current_year) %>%
   # filter(month(SLOT_BEGIN_TIME) == 1) %>%
   left_join(org_block_type,
@@ -625,12 +626,13 @@ block_distribution <- block_distribution %>%
 
 
 
-# Individual/Combination Blocks ------------------------------------------------
+# Individual/Combination Blocks next 90 Days ------------------------------------
 block_error <- slot_data_prc_tbl %>%
-  filter(year(SLOT_BEGIN_TIME) == current_year) %>%
-  filter(SLOT_BEGIN_TIME >= TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
-  # filter(PROV_ID == "1410756") %>%
-  # filter(DEPARTMENT_ID == "8827031") %>%
+  # filter(year(SLOT_BEGIN_TIME) == current_year) %>%
+   filter(SLOT_BEGIN_TIME > TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
+  filter(SLOT_BEGIN_TIME <= TO_DATE(date_start_next30, "YYYY-MM-DD HH24:MI:SS")) %>%
+  filter(PROV_ID == "1410756") %>%
+  filter(DEPARTMENT_ID == "8827031") %>%
   left_join(org_block_type,
             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
   left_join(clarity_ser_tbl_loc %>%
@@ -684,76 +686,80 @@ block_error <- block_error %>%
 
 
 
-# # Open Slots in next 30 days ---------------------------------------------------
-# open_slots <- slot_data_prc_tbl %>%
-#   filter(year(SLOT_BEGIN_TIME) == current_year) %>%
-#   filter(SLOT_BEGIN_TIME > TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
-#   filter(SLOT_BEGIN_TIME <= TO_DATE(date_start_next30, "YYYY-MM-DD HH24:MI:SS")) %>%
-#   filter(PROV_ID == "1410756") %>%
-#   filter(DEPARTMENT_ID == "8827031") %>%
-#   left_join(org_block_type,
-#             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
-#   left_join(clarity_ser_tbl_loc %>%
-#               dplyr::select(PROV_ID, PROV_TYPE, ACTIVE_STATUS)) %>%
-#   # filter(PROV_TYPE == "Physician") %>%
-#   left_join(clarity_ser_2_tbl_loc %>%
-#               dplyr::select(PROV_ID, GENERIC_YN)) %>%
-#   filter(GENERIC_YN == "N" |  is.na(GENERIC_YN)) %>%
-#   left_join(dep_mapping_tbl_loc %>%
-#               mutate(SITE = case_when(RPT_GRP_SEVNTEEN_C == 2 ~ "NETWORK",
-#                                       RPT_GRP_SEVNTEEN_C == 3 ~ "OTHER",
-#                                       RPT_GRP_SEVNTEEN_C == 4 ~ "MSH-MSDFP",
-#                                       RPT_GRP_SEVNTEEN_C == 6 ~ "MSUS",
-#                                       RPT_GRP_SEVNTEEN_C == 7 ~ "MSDMG",
-#                                       RPT_GRP_SEVNTEEN_C == 8 ~ "MSBI",
-#                                       RPT_GRP_SEVNTEEN_C == 9 ~ "MSW",
-#                                       RPT_GRP_SEVNTEEN_C == 10 ~ "MSHP", 
-#                                       RPT_GRP_SEVNTEEN_C == 11 ~ "MSM",
-#                                       RPT_GRP_SEVNTEEN_C == 12 ~ "MSH- AMBULATORY CARE",
-#                                       RPT_GRP_SEVNTEEN_C == 13 ~ "NYEE",
-#                                       RPT_GRP_SEVNTEEN_C == 14 ~ "MS NOW",
-#                                       RPT_GRP_SEVNTEEN_C == 15 ~ "MSQ",
-#                                       RPT_GRP_SEVNTEEN_C == 19 ~ "MSSN",
-#                                       RPT_GRP_SEVNTEEN_C == 38 ~ "MSB")) %>%
-#               dplyr::select(SITE, SPECIALTY, DEPARTMENT_ID) %>%
-#               rename("DEPT_SPECIALTY_NAME" = SPECIALTY),
-#             copy = T) %>%
-#   mutate(slot_year = year(SLOT_BEGIN_TIME),
-#          slot_month = month(SLOT_BEGIN_TIME)) %>%
-#   mutate(slot_date = sql("TRUNC(SLOT_BEGIN_TIME)"),
-#          slot_week = sql("TRUNC(SLOT_BEGIN_TIME, 'IW')"),
-#          slot_day_num = sql("TO_CHAR(SLOT_BEGIN_TIME, 'D')"),
-#          slot_day = sql("TO_CHAR(SLOT_BEGIN_TIME, 'DY')")) %>%
-#   mutate(MSHS = "MSHS") 
-# 
-# 
-# open_slots_summary <- open_slots %>%
-#   group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
-#            slot_year, slot_month, slot_date) %>%
-#   summarise(reg_openings = sum(REG_AVAIL_OPENINGS),
-#             sched_num = sum(SCHED_NUM),
-#             avail_min = sum(REG_AVAIL_MIN),
-#             sched_min = sum(SCHED_MIN)) %>%
-#   mutate(perc_open = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ sched_num/reg_openings)) %>%
-#   collect() %>%
-#   mutate(slot_year_month = as.character(paste0(slot_year, "-", ifelse(nchar(slot_month)==1,paste0("0",slot_month), slot_month))),
-#            slot_month = as.numeric(slot_month))
-# 
-# 
-# open_slots_detail <- open_slots %>%
-#   group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
-#            slot_year, slot_month, slot_date, SLOT_BEGIN_TIME, FINAL_BLOCKS) %>%
-#   mutate(reg_openings = sum(REG_AVAIL_OPENINGS),
-#             sched_num = sum(SCHED_NUM),
-#             avail_min = sum(REG_AVAIL_MIN),
-#             sched_min = sum(SCHED_MIN)) %>%
-#   filter((reg_openings-sched_num)>0) %>%
-#   dplyr::select(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
-#            slot_year, slot_month, slot_date, SLOT_BEGIN_TIME, FINAL_BLOCKS, SLOT_LENGTH, REG_AVAIL_OPENINGS, sched_num, REG_AVAIL_MIN, SCHED_MIN) %>%
-#   collect() %>%
-#   mutate(slot_year_month = as.character(paste0(slot_year, "-", ifelse(nchar(slot_month)==1,paste0("0",slot_month), slot_month))),
-#            slot_month = as.numeric(slot_month))
-  
+# Open Slots in next 30 days ---------------------------------------------------
+open_slots <- slot_data_prc_tbl %>%
+  # filter(year(SLOT_BEGIN_TIME) == current_year) %>%
+  filter(SLOT_BEGIN_TIME > TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
+  filter(SLOT_BEGIN_TIME <= TO_DATE(date_start_next30, "YYYY-MM-DD HH24:MI:SS")) %>%
+  filter(PROV_ID == "1410756") %>%
+  filter(DEPARTMENT_ID == "8827031") %>%
+  left_join(org_block_type,
+            by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
+  left_join(clarity_ser_tbl_loc %>%
+              dplyr::select(PROV_ID, PROV_TYPE, ACTIVE_STATUS)) %>%
+  # filter(PROV_TYPE == "Physician") %>%
+  left_join(clarity_ser_2_tbl_loc %>%
+              dplyr::select(PROV_ID, GENERIC_YN)) %>%
+  filter(GENERIC_YN == "N" |  is.na(GENERIC_YN)) %>%
+  left_join(dep_mapping_tbl_loc %>%
+              mutate(SITE = case_when(RPT_GRP_SEVNTEEN_C == 2 ~ "NETWORK",
+                                      RPT_GRP_SEVNTEEN_C == 3 ~ "OTHER",
+                                      RPT_GRP_SEVNTEEN_C == 4 ~ "MSH-MSDFP",
+                                      RPT_GRP_SEVNTEEN_C == 6 ~ "MSUS",
+                                      RPT_GRP_SEVNTEEN_C == 7 ~ "MSDMG",
+                                      RPT_GRP_SEVNTEEN_C == 8 ~ "MSBI",
+                                      RPT_GRP_SEVNTEEN_C == 9 ~ "MSW",
+                                      RPT_GRP_SEVNTEEN_C == 10 ~ "MSHP",
+                                      RPT_GRP_SEVNTEEN_C == 11 ~ "MSM",
+                                      RPT_GRP_SEVNTEEN_C == 12 ~ "MSH- AMBULATORY CARE",
+                                      RPT_GRP_SEVNTEEN_C == 13 ~ "NYEE",
+                                      RPT_GRP_SEVNTEEN_C == 14 ~ "MS NOW",
+                                      RPT_GRP_SEVNTEEN_C == 15 ~ "MSQ",
+                                      RPT_GRP_SEVNTEEN_C == 19 ~ "MSSN",
+                                      RPT_GRP_SEVNTEEN_C == 38 ~ "MSB")) %>%
+              dplyr::select(SITE, SPECIALTY, DEPARTMENT_ID) %>%
+              rename("DEPT_SPECIALTY_NAME" = SPECIALTY),
+            copy = T) %>%
+  mutate(slot_year = year(SLOT_BEGIN_TIME),
+         slot_month = month(SLOT_BEGIN_TIME)) %>%
+  mutate(slot_date = sql("TRUNC(SLOT_BEGIN_TIME)"),
+         slot_week = sql("TRUNC(SLOT_BEGIN_TIME, 'IW')"),
+         slot_day_num = sql("TO_CHAR(SLOT_BEGIN_TIME, 'D')"),
+         slot_day = sql("TO_CHAR(SLOT_BEGIN_TIME, 'DY')")) %>%
+  mutate(MSHS = "MSHS")
+
+
+open_slots_summary <- open_slots %>%
+  group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
+           slot_year, slot_month, slot_date) %>%
+  summarise(reg_openings = sum(REG_AVAIL_OPENINGS),
+            sched_num = sum(SCHED_NUM),
+            avail_min = sum(REG_AVAIL_MIN),
+            sched_min = sum(SCHED_MIN)) %>%
+  mutate(unused_num = reg_openings - sched_num,
+         unused_min = avail_min - sched_min) %>%
+  mutate(perc_num_open = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ sched_num/reg_openings),
+         perc_min_open = case_when(avail_min == 0 | is.na(avail_min) ~ 0, TRUE ~ sched_min/avail_min)) %>%
+  collect() %>%
+  mutate(slot_year_month = as.character(paste0(slot_year, "-", ifelse(nchar(slot_month)==1,paste0("0",slot_month), slot_month))),
+           slot_month = as.numeric(slot_month))
+
+
+open_slots_detail <- open_slots %>%
+  group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
+           slot_year, slot_month, slot_date, SLOT_BEGIN_TIME, FINAL_BLOCKS) %>%
+  mutate(reg_openings = sum(REG_AVAIL_OPENINGS),
+            sched_num = sum(SCHED_NUM),
+            avail_min = sum(REG_AVAIL_MIN),
+            sched_min = sum(SCHED_MIN)) %>%
+  mutate(unused_num = reg_openings - sched_num,
+         unused_min = avail_min - sched_min) %>%
+  filter((unused_num)>=1) %>%
+  dplyr::select(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
+           slot_year, slot_month, slot_date, SLOT_BEGIN_TIME, FINAL_BLOCKS, SLOT_LENGTH, REG_AVAIL_OPENINGS, sched_num, REG_AVAIL_MIN, SCHED_MIN) %>%
+  collect() %>%
+  mutate(slot_year_month = as.character(paste0(slot_year, "-", ifelse(nchar(slot_month)==1,paste0("0",slot_month), slot_month))),
+           slot_month = as.numeric(slot_month))
 
 
 ```
@@ -1629,4 +1635,618 @@ reactable(
 <br/>
 <br/>
 
+
+## Unused Slots (Physicians Only)
+```{r Unused Slots Summary (Physicians), echo = FALSE, warning = FALSE, message = FALSE}
+# Table Output -----------------------------------------------------------------
+htmltools::browsable(
+  tagList(
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download Table"),
+      onclick = "Reactable.downloadDataCSV('unused-slots-summary-physician', 'Block Combinations')"
+    ),
+# htmltools::browsable(
+#   tagList(
+#     div(tags$label("Group by", `for` = "cars-grouping-select")),
+#     tags$select(
+#       id = "cars-grouping-select",
+#       onchange = "Reactable.setGroupBy('cars-grouping-table', this.value ? [this.value] : [])",
+#       tags$option("None", value = c("Campus","Campus.Specialty.Group")),
+#       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")),
+#       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#       lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#     ),
+#
+#     tags$hr("aria-hidden" = "true"),
+reactable(
+  open_slots_summary %>%
+    mutate(slot_date = as.character(slot_date)) %>%
+    arrange(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, slot_year_month, slot_date) %>%
+    filter(PROV_TYPE == "Physician"),
+  elementId = "unused-slots-summary-physician",
+  # elementId = "cars-grouping-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left",
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+
+  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year_month", "slot_date", "PROV_NM_WID"),
+
+  columnGroups = list(
+    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year_month", "slot_date", "PROV_NM_WID", "PROV_TYPE", "ACTIVE_STATUS"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Slot Openings"),
+             columns = c("reg_openings", "sched_num", "unused_num"),
+             headerStyle = list(background = "#212070", color = "white", fontSize = "15px")),
+    colGroup(name = paste0("Slot Minutes"),
+             columns = c("avail_min", "sched_min", "unused_min"),
+             headerStyle = list(background = "#d80b8c", color = "white", fontSize = "15px"))
+    ),
+
+  columns = list(
+
+    SITE = colDef(
+      name = "Site",
+      minWidth = 150),
+
+    DEPT_SPECIALTY_NAME = colDef(
+      name = "Specialty",
+      minWidth = 180),
+
+    DEPARTMENT_NAME = colDef(
+      name = "Department",
+      minWidth = 180),
+
+    PROV_TYPE = colDef(
+      name = "Provider Type",
+      minWidth = 100),
+
+    PROV_NM_WID = colDef(
+      name = "Provider",
+      minWidth = 150),
+
+    ACTIVE_STATUS = colDef(
+      name = "Provider Status",
+      minWidth = 80),
+
+    slot_year_month = colDef(
+      name = "Year-Month",
+      minWidth = 80),
+
+    slot_date = colDef(
+      name = "Slot Date",
+      minWidth = 100),
+  
+    reg_openings = colDef(
+      name = "Available Openings",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    sched_num = colDef(
+      name = "Scheduled Openings",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    unused_num = colDef(
+      name = "Unused Openings",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['unused_num']
+        if (value > 0) {
+          var color = '#e00000'
+        } else {
+          var color = '#008000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }")),
+    
+    avail_min = colDef(
+      name = "Available Minutes",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    sched_min = colDef(
+      name = "Scheduled Minutes",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    unused_min = colDef(
+      name = "Unused Minutes",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['unused_num']
+        if (value > 0) {
+          var color = '#e00000'
+        } else {
+          var color = '#008000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }")),
+
+
+    PROV_ID = colDef(show =F),
+    DEPARTMENT_ID = colDef(show =F),
+    slot_year = colDef(show =F),
+    slot_month = colDef(show =F),
+    perc_num_open = colDef(show =F),
+    perc_min_open = colDef(show =F)
+  ) # Close Columns
+  ) # Close Reactable
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+```{r Unused Slots Detail (Physicians), echo = FALSE, warning = FALSE, message = FALSE}
+# Table Output -----------------------------------------------------------------
+htmltools::browsable(
+  tagList(
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download Table"),
+      onclick = "Reactable.downloadDataCSV('unused-slots-detail-physician', 'Block Combinations')"
+    ),
+# htmltools::browsable(
+#   tagList(
+#     div(tags$label("Group by", `for` = "cars-grouping-select")),
+#     tags$select(
+#       id = "cars-grouping-select",
+#       onchange = "Reactable.setGroupBy('cars-grouping-table', this.value ? [this.value] : [])",
+#       tags$option("None", value = c("Campus","Campus.Specialty.Group")),
+#       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")),
+#       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#       lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#     ),
+#
+#     tags$hr("aria-hidden" = "true"),
+reactable(
+  open_slots_detail %>%
+    mutate(slot_date = as.character(slot_date),
+           SLOT_BEGIN_TIME = as.character(SLOT_BEGIN_TIME)) %>%
+    arrange(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, slot_year_month, SLOT_BEGIN_TIME) %>%
+    filter(PROV_TYPE == "Physician"),
+  elementId = "unused-slots-detail-physician",
+  # elementId = "cars-grouping-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left",
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+
+  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year_month", "slot_date", "PROV_NM_WID"),
+
+  # columnGroups = list(
+  #   colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year_month", "slot_date", "PROV_NM_WD", "PROV_TYPE", "ACTIVE_STATUS", "SLOT_BEGIN_TIME", "FINAL_BLOCKS"),
+  #            headerStyle = list(color = "black", fontSize = "15px"),
+  #            sticky = "left"),
+  #   colGroup(name = paste0("Slot Openings"),
+  #            columns = c("reg_openings", "sched_num", "unused_num"),
+  #            headerStyle = list(background = "#212070", color = "white", fontSize = "15px")),
+  #   colGroup(name = paste0("Slot Minutes"),
+  #            columns = c("avail_min", "sched_min", "unused_min"),
+  #            headerStyle = list(background = "#d80b8c", color = "white", fontSize = "15px"))
+  #   ),
+
+  columns = list(
+
+    SITE = colDef(
+      name = "Site",
+      minWidth = 150),
+
+    DEPT_SPECIALTY_NAME = colDef(
+      name = "Specialty",
+      minWidth = 180),
+
+    DEPARTMENT_NAME = colDef(
+      name = "Department",
+      minWidth = 180),
+
+    PROV_TYPE = colDef(
+      name = "Provider Type",
+      minWidth = 100),
+
+    PROV_NM_WID = colDef(
+      name = "Provider",
+      minWidth = 150),
+
+    ACTIVE_STATUS = colDef(
+      name = "Provider Status",
+      minWidth = 80),
+
+    slot_year_month = colDef(
+      name = "Year-Month",
+      minWidth = 80),
+
+    slot_date = colDef(
+      name = "Slot Date",
+      minWidth = 100),
+    
+    SLOT_BEGIN_TIME = colDef(
+      name = "Slot DTTM",
+      minWidth = 100),
+    
+    SLOT_BEGIN_TIME = colDef(
+      name = "Slot Length",
+      minWidth = 100),
+    
+    FINAL_BLOCKS = colDef(
+      name = "Blocks Assigned",
+      minWidth = 200),
+    
+    SLOT_LENGTH = colDef(
+      name = "Slot Length",
+      minWidth = 100),
+  
+    REG_AVAIL_OPENINGS = colDef(
+      name = "Unused Openings",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(color = "#e00000", fontWeight = "Bold")),
+    
+    REG_AVAIL_MIN = colDef(
+      name = "Unused Minutes",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(color = "#e00000", fontWeight = "Bold")),
+
+
+    PROV_ID = colDef(show =F),
+    DEPARTMENT_ID = colDef(show =F),
+    slot_year = colDef(show =F),
+    slot_month = colDef(show =F),
+    sched_num = colDef(show =F),
+    SCHED_MIN = colDef(show =F),
+    perc_num_open = colDef(show =F),
+    perc_min_open = colDef(show =F)
+  ) # Close Columns
+  ) # Close Reactable
+ )
+)
+
+```
+<br/>
+<br/>
+
+## Unused Slots (All Provider)
+```{r Unused Slots Summary (All), echo = FALSE, warning = FALSE, message = FALSE}
+# Table Output -----------------------------------------------------------------
+htmltools::browsable(
+  tagList(
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download Table"),
+      onclick = "Reactable.downloadDataCSV('unused-slots-summary', 'Block Combinations')"
+    ),
+# htmltools::browsable(
+#   tagList(
+#     div(tags$label("Group by", `for` = "cars-grouping-select")),
+#     tags$select(
+#       id = "cars-grouping-select",
+#       onchange = "Reactable.setGroupBy('cars-grouping-table', this.value ? [this.value] : [])",
+#       tags$option("None", value = c("Campus","Campus.Specialty.Group")),
+#       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")),
+#       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#       lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#     ),
+#
+#     tags$hr("aria-hidden" = "true"),
+reactable(
+  open_slots_summary %>%
+    mutate(slot_date = as.character(slot_date)) %>%
+    arrange(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, slot_year_month, slot_date) %>%
+    filter(PROV_TYPE == "Physician"),
+  elementId = "unused-slots-summary",
+  # elementId = "cars-grouping-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left",
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+
+  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year_month", "slot_date", "PROV_NM_WID"),
+
+  columnGroups = list(
+    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year_month", "slot_date", "PROV_NM_WID", "PROV_TYPE", "ACTIVE_STATUS"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Slot Openings"),
+             columns = c("reg_openings", "sched_num", "unused_num"),
+             headerStyle = list(background = "#212070", color = "white", fontSize = "15px")),
+    colGroup(name = paste0("Slot Minutes"),
+             columns = c("avail_min", "sched_min", "unused_min"),
+             headerStyle = list(background = "#d80b8c", color = "white", fontSize = "15px"))
+    ),
+
+  columns = list(
+
+    SITE = colDef(
+      name = "Site",
+      minWidth = 150),
+
+    DEPT_SPECIALTY_NAME = colDef(
+      name = "Specialty",
+      minWidth = 180),
+
+    DEPARTMENT_NAME = colDef(
+      name = "Department",
+      minWidth = 180),
+
+    PROV_TYPE = colDef(
+      name = "Provider Type",
+      minWidth = 100),
+
+    PROV_NM_WID = colDef(
+      name = "Provider",
+      minWidth = 150),
+
+    ACTIVE_STATUS = colDef(
+      name = "Provider Status",
+      minWidth = 80),
+
+    slot_year_month = colDef(
+      name = "Year-Month",
+      minWidth = 80),
+
+    slot_date = colDef(
+      name = "Slot Date",
+      minWidth = 100),
+  
+    reg_openings = colDef(
+      name = "Available Openings",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    sched_num = colDef(
+      name = "Scheduled Openings",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    unused_num = colDef(
+      name = "Unused Openings",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['unused_num']
+        if (value > 0) {
+          var color = '#e00000'
+        } else {
+          var color = '#008000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }")),
+    
+    avail_min = colDef(
+      name = "Available Minutes",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    sched_min = colDef(
+      name = "Scheduled Minutes",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    unused_min = colDef(
+      name = "Unused Minutes",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['unused_num']
+        if (value > 0) {
+          var color = '#e00000'
+        } else {
+          var color = '#008000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }")),
+
+
+    PROV_ID = colDef(show =F),
+    DEPARTMENT_ID = colDef(show =F),
+    slot_year = colDef(show =F),
+    slot_month = colDef(show =F),
+    perc_num_open = colDef(show =F),
+    perc_min_open = colDef(show =F)
+  ) # Close Columns
+  ) # Close Reactable
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+```{r Unused Slots Detail (All), echo = FALSE, warning = FALSE, message = FALSE}
+# Table Output -----------------------------------------------------------------
+htmltools::browsable(
+  tagList(
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download Table"),
+      onclick = "Reactable.downloadDataCSV('unused-slots-detail', 'Block Combinations')"
+    ),
+# htmltools::browsable(
+#   tagList(
+#     div(tags$label("Group by", `for` = "cars-grouping-select")),
+#     tags$select(
+#       id = "cars-grouping-select",
+#       onchange = "Reactable.setGroupBy('cars-grouping-table', this.value ? [this.value] : [])",
+#       tags$option("None", value = c("Campus","Campus.Specialty.Group")),
+#       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")),
+#       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#       lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#     ),
+#
+#     tags$hr("aria-hidden" = "true"),
+reactable(
+  open_slots_detail %>%
+    mutate(slot_date = as.character(slot_date),
+           SLOT_BEGIN_TIME = as.character(SLOT_BEGIN_TIME)) %>%
+    arrange(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, slot_year_month, SLOT_BEGIN_TIME) %>%
+    filter(PROV_TYPE == "Physician"),
+  elementId = "unused-slots-detail",
+  # elementId = "cars-grouping-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left",
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+
+  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year_month", "slot_date", "PROV_NM_WID"),
+
+  # columnGroups = list(
+  #   colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "slot_year_month", "slot_date", "PROV_NM_WD", "PROV_TYPE", "ACTIVE_STATUS", "SLOT_BEGIN_TIME", "FINAL_BLOCKS"),
+  #            headerStyle = list(color = "black", fontSize = "15px"),
+  #            sticky = "left"),
+  #   colGroup(name = paste0("Slot Openings"),
+  #            columns = c("reg_openings", "sched_num", "unused_num"),
+  #            headerStyle = list(background = "#212070", color = "white", fontSize = "15px")),
+  #   colGroup(name = paste0("Slot Minutes"),
+  #            columns = c("avail_min", "sched_min", "unused_min"),
+  #            headerStyle = list(background = "#d80b8c", color = "white", fontSize = "15px"))
+  #   ),
+
+  columns = list(
+
+    SITE = colDef(
+      name = "Site",
+      minWidth = 150),
+
+    DEPT_SPECIALTY_NAME = colDef(
+      name = "Specialty",
+      minWidth = 180),
+
+    DEPARTMENT_NAME = colDef(
+      name = "Department",
+      minWidth = 180),
+
+    PROV_TYPE = colDef(
+      name = "Provider Type",
+      minWidth = 100),
+
+    PROV_NM_WID = colDef(
+      name = "Provider",
+      minWidth = 150),
+
+    ACTIVE_STATUS = colDef(
+      name = "Provider Status",
+      minWidth = 80),
+
+    slot_year_month = colDef(
+      name = "Year-Month",
+      minWidth = 80),
+
+    slot_date = colDef(
+      name = "Slot Date",
+      minWidth = 100),
+    
+    SLOT_BEGIN_TIME = colDef(
+      name = "Slot DTTM",
+      minWidth = 100),
+    
+    SLOT_BEGIN_TIME = colDef(
+      name = "Slot Length",
+      minWidth = 100),
+    
+    FINAL_BLOCKS = colDef(
+      name = "Blocks Assigned",
+      minWidth = 200),
+    
+    SLOT_LENGTH = colDef(
+      name = "Slot Length",
+      minWidth = 100),
+  
+    REG_AVAIL_OPENINGS = colDef(
+      name = "Unused Openings",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(color = "#e00000", fontWeight = "Bold")),
+    
+    REG_AVAIL_MIN = colDef(
+      name = "Unused Minutes",
+      aggregate = 'sum',
+      maxWidth = 200,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(color = "#e00000", fontWeight = "Bold")),
+
+
+    PROV_ID = colDef(show =F),
+    DEPARTMENT_ID = colDef(show =F),
+    slot_year = colDef(show =F),
+    slot_month = colDef(show =F),
+    sched_num = colDef(show =F),
+    SCHED_MIN = colDef(show =F),
+    perc_num_open = colDef(show =F),
+    perc_min_open = colDef(show =F)
+  ) # Close Columns
+  ) # Close Reactable
+ )
+)
+
+```
+<br/>
+<br/>
 
