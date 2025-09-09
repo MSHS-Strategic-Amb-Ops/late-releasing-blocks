@@ -738,8 +738,8 @@ open_slots_summary <- open_slots %>%
             sched_num = sum(SCHED_NUM),
             avail_min = sum(REG_AVAIL_MIN),
             sched_min = sum(SCHED_MIN)) %>%
-  mutate(unused_num = reg_openings - sched_num,
-         unused_min = avail_min - sched_min) %>%
+  mutate(unused_num = case_when(reg_openings - sched_num >0 ~ reg_openings - sched_num, TRUE ~ 0),
+         unused_min = case_when(avail_min - sched_min >0 ~ avail_min - sched_min, TRUE ~ 0)) %>%
   mutate(perc_num_open = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ sched_num/reg_openings),
          perc_min_open = case_when(avail_min == 0 | is.na(avail_min) ~ 0, TRUE ~ sched_min/avail_min)) %>%
   collect() %>%
