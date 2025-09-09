@@ -532,10 +532,10 @@ org_block_type <- block_raw_tbl_loc %>%
   mutate(BLOCK_RELEASE_ALL = case_when(FINAL_BLOCK_NAME %in% release_blocks_all ~ 1, TRUE ~ 0),
          BLOCK_RELEASE = case_when(FINAL_BLOCK_NAME %in% release_blocks ~ 1, TRUE ~ 0),
          BLOCK_NEW = case_when(FINAL_BLOCK_NAME %in% non_release_new_blocks ~ 1, TRUE ~ 0),
-         BLOCK_OTHER = case_when(BLOCK_RELEASE == 0 & BLOCK_NEW == 0 ~ 1, TRUE ~ 0)) %>%
+         BLOCK_OTHER = case_when(BLOCK_RELEASE_ALL == 0 & BLOCK_NEW == 0 ~ 1, TRUE ~ 0)) %>%
   arrange(DEPARTMENT_ID, SLOT_BEGIN_TIME, PROV_ID, FINAL_BLOCK_NAME) %>%
   group_by(DEPARTMENT_ID, SLOT_BEGIN_TIME, PROV_ID) %>%
-  summarise(FINAL_BLOCKS = sql("LISTAGG(FINAL_BLOCK_NAME, ' , ')"),
+  summarise(FINAL_BLOCKS = sql("LISTAGG(DISTINCT FINAL_BLOCK_NAME, ' , ')"),
             BLOCK_RELEASE_ALL_NUM = sum(BLOCK_RELEASE_ALL),
             BLOCK_RELEASE_NUM = sum(BLOCK_RELEASE),
             BLOCK_NEW_NUM = sum(BLOCK_NEW),
@@ -549,7 +549,7 @@ org_block_type <- block_raw_tbl_loc %>%
 
 
 block_distribution <- slot_data_prc_tbl %>%
-  # filter(PROV_ID == "1410756") %>%
+  # filter(PROV_ID == "449366") %>%
   # filter(DEPARTMENT_ID == "8827031") %>%
   filter(year(SLOT_BEGIN_TIME) == current_year) %>%
   # filter(month(SLOT_BEGIN_TIME) == 1) %>%
@@ -611,7 +611,7 @@ block_distribution <- block_distribution %>%
   collect()
 
 
-block_distribution <- block_distribution %>%
+block_distribution <- check %>%
   mutate(perc_reg_openings_new_release = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ reg_openings_new_release/reg_openings),
          perc_release_all = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release_all/reg_openings_new_release),
          perc_release = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release/reg_openings_new_release)) %>%
@@ -629,8 +629,9 @@ block_distribution <- block_distribution %>%
 # Individual/Combination Blocks next 90 Days ------------------------------------
 block_error <- slot_data_prc_tbl %>%
   # filter(year(SLOT_BEGIN_TIME) == current_year) %>%
-   filter(SLOT_BEGIN_TIME >= TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
+  filter(SLOT_BEGIN_TIME >= TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
   filter(SLOT_BEGIN_TIME <= TO_DATE(date_start_next30, "YYYY-MM-DD HH24:MI:SS")) %>%
+  # filter(PROV_ID == "449366") %>%
   # filter(PROV_ID == "1410756") %>%
   # filter(DEPARTMENT_ID == "8827031") %>%
   left_join(org_block_type,
@@ -668,6 +669,7 @@ block_error <- slot_data_prc_tbl %>%
          slot_day = sql("TO_CHAR(SLOT_BEGIN_TIME, 'DY')")) %>%
   mutate(MSHS = "MSHS") %>%
   mutate(incorrect_blocks = BLOCK_RELEASE_ALL_YN + BLOCK_NEW_YN + BLOCK_OTHER_YN)
+
 
 block_error <- block_error %>%
   group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
