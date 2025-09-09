@@ -1344,7 +1344,7 @@ reactable(
 
 
 ## Combination Blocks (Physicians Only)
-*Includes slots from `r start_date` to `r date_start_next30`*<br/>
+*Includes slots from `r date_start` to `r date_start_next30`*<br/>
 ```{r Combination Blocks (Physicians), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
@@ -1491,7 +1491,7 @@ reactable(
 
 
 ## Combination Blocks (All Providers)
-*Includes slots from `r start_date` to `r date_start_next30`*<br/>
+*Includes slots from `r date_start` to `r date_start_next30`*<br/>
 ```{r Combination Blocks (All), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
@@ -1639,7 +1639,7 @@ reactable(
 
 
 ## Unused Slots (Physicians Only)
-*Includes slots from `r start_date` to `r date_start_next30`*<br/>
+*Includes slots from `r date_start` to `r date_start_next30`*<br/>
 ```{r Unused Slots Summary (Physicians), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
@@ -1946,7 +1946,7 @@ reactable(
 <br/>
 
 ## Unused Slots (All Provider)
-*Includes slots from `r start_date` to `r date_start_next30`*<br/>
+*Includes slots from `r date_start` to `r date_start_next30`*<br/>
 ```{r Unused Slots Summary (All), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
