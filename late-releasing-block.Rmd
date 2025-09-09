@@ -549,8 +549,8 @@ org_block_type <- block_raw_tbl_loc %>%
 
 
 block_distribution <- slot_data_prc_tbl %>%
-  filter(PROV_ID == "1410756") %>%
-  filter(DEPARTMENT_ID == "8827031") %>%
+  # filter(PROV_ID == "1410756") %>%
+  # filter(DEPARTMENT_ID == "8827031") %>%
   filter(year(SLOT_BEGIN_TIME) == current_year) %>%
   # filter(month(SLOT_BEGIN_TIME) == 1) %>%
   left_join(org_block_type,
@@ -631,8 +631,8 @@ block_error <- slot_data_prc_tbl %>%
   # filter(year(SLOT_BEGIN_TIME) == current_year) %>%
    filter(SLOT_BEGIN_TIME > TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
   filter(SLOT_BEGIN_TIME <= TO_DATE(date_start_next30, "YYYY-MM-DD HH24:MI:SS")) %>%
-  filter(PROV_ID == "1410756") %>%
-  filter(DEPARTMENT_ID == "8827031") %>%
+  # filter(PROV_ID == "1410756") %>%
+  # filter(DEPARTMENT_ID == "8827031") %>%
   left_join(org_block_type,
             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
   left_join(clarity_ser_tbl_loc %>%
@@ -691,8 +691,8 @@ open_slots <- slot_data_prc_tbl %>%
   # filter(year(SLOT_BEGIN_TIME) == current_year) %>%
   filter(SLOT_BEGIN_TIME > TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
   filter(SLOT_BEGIN_TIME <= TO_DATE(date_start_next30, "YYYY-MM-DD HH24:MI:SS")) %>%
-  filter(PROV_ID == "1410756") %>%
-  filter(DEPARTMENT_ID == "8827031") %>%
+  # filter(PROV_ID == "1410756") %>%
+  # filter(DEPARTMENT_ID == "8827031") %>%
   left_join(org_block_type,
             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
   left_join(clarity_ser_tbl_loc %>%
@@ -1344,6 +1344,7 @@ reactable(
 
 
 ## Combination Blocks (Physicians Only)
+*Includes slots from `r start_date` to `r date_start_next30`*<br/>
 ```{r Combination Blocks (Physicians), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
@@ -1490,6 +1491,7 @@ reactable(
 
 
 ## Combination Blocks (All Providers)
+*Includes slots from `r start_date` to `r date_start_next30`*<br/>
 ```{r Combination Blocks (All), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
@@ -1637,6 +1639,7 @@ reactable(
 
 
 ## Unused Slots (Physicians Only)
+*Includes slots from `r start_date` to `r date_start_next30`*<br/>
 ```{r Unused Slots Summary (Physicians), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
@@ -1802,7 +1805,6 @@ reactable(
 <br/>
 <br/>
 
-
 ```{r Unused Slots Detail (Physicians), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
@@ -1944,6 +1946,7 @@ reactable(
 <br/>
 
 ## Unused Slots (All Provider)
+*Includes slots from `r start_date` to `r date_start_next30`*<br/>
 ```{r Unused Slots Summary (All), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
