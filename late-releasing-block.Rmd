@@ -611,7 +611,7 @@ block_distribution <- block_distribution %>%
   collect()
 
 
-block_distribution <- check %>%
+block_distribution <- block_distribution %>%
   mutate(perc_reg_openings_new_release = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ reg_openings_new_release/reg_openings),
          perc_release_all = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release_all/reg_openings_new_release),
          perc_release = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release/reg_openings_new_release)) %>%
