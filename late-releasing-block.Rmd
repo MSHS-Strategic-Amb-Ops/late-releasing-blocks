@@ -546,12 +546,16 @@ org_block_type <- block_raw_tbl_loc %>%
          BLOCK_OTHER_YN = case_when(BLOCK_OTHER_NUM>0 ~ 1, TRUE ~ 0)) 
 
 
-
+check <- slot_data_prc_tbl %>%
+  group_by(year(SLOT_BEGIN_TIME), month(SLOT_BEGIN_TIME), DEPARTMENT_ID, PROV_ID, PROV_NM_WID) %>%
+  summarise(total = n()) %>%
+  collect()
 
 block_distribution <- slot_data_prc_tbl %>%
-  # filter(PROV_ID == "449366") %>%
-  # filter(DEPARTMENT_ID == "8827031") %>%
-  filter(year(SLOT_BEGIN_TIME) == current_year) %>%
+  # filter(PROV_ID == "1325296") %>%
+  # filter(DEPARTMENT_ID == "8274007") %>%
+  filter(year(SLOT_BEGIN_TIME) >= current_year) %>%
+   # filter(month(SLOT_BEGIN_TIME) >9) %>%
   # filter(month(SLOT_BEGIN_TIME) == 1) %>%
   left_join(org_block_type,
             by = c("DEPARTMENT_ID", "PROV_ID", "SLOT_BEGIN_TIME")) %>%
@@ -585,7 +589,9 @@ block_distribution <- slot_data_prc_tbl %>%
   mutate(MSHS = "MSHS") 
 
 
-block_distribution <- block_distribution %>%
+past_block_distribution <- block_distribution %>%
+  filter(year(SLOT_BEGIN_TIME) == current_year) %>%
+  filter(SLOT_BEGIN_TIME <= TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
   group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
            slot_year, slot_month) %>%
   summarise(avail_hour = sum(REG_AVAIL_MIN, na.rm = T)/60,
@@ -611,7 +617,7 @@ block_distribution <- block_distribution %>%
   collect()
 
 
-block_distribution <- block_distribution %>%
+past_block_distribution <- past_block_distribution %>%
   mutate(perc_reg_openings_new_release = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ reg_openings_new_release/reg_openings),
          perc_release_all = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release_all/reg_openings_new_release),
          perc_release = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release/reg_openings_new_release)) %>%
@@ -624,6 +630,47 @@ block_distribution <- block_distribution %>%
            slot_month = as.numeric(slot_month))  %>%
   relocate(slot_year_month, .after = slot_month)
 
+
+future_block_distribution <- block_distribution %>%
+  # filter(year(SLOT_BEGIN_TIME) == current_year) %>%
+  filter(SLOT_BEGIN_TIME >= TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
+  group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
+           slot_year, slot_month) %>%
+  summarise(avail_hour = sum(REG_AVAIL_MIN, na.rm = T)/60,
+            sched_hour = sum(SCHED_MIN, na.rm = T)/60,
+            arrived_hour = sum(ARRIVED_MIN, na.rm = T)/60,
+            avail_hour_new = sum(REG_AVAIL_MIN[BLOCK_NEW_YN == 1])/60,
+            sched_hour_new = sum(SCHED_MIN[BLOCK_NEW_YN == 1], na.rm = T)/60,
+            arrived_hour_new = sum(ARRIVED_MIN[BLOCK_NEW_YN == 1], na.rm = T)/60,
+            avail_hour_release = sum(REG_AVAIL_MIN[BLOCK_RELEASE_ALL_YN == 1])/60,
+            sched_hour_release = sum(SCHED_MIN[BLOCK_RELEASE_ALL_YN == 1], na.rm = T)/60,
+            arrived_hour_release = sum(ARRIVED_MIN[BLOCK_RELEASE_ALL_YN == 1], na.rm = T)/60,
+            avail_hour_other = sum(REG_AVAIL_MIN[BLOCK_OTHER_YN == 1])/60,
+            sched_hour_other = sum(SCHED_MIN[BLOCK_OTHER_YN == 1], na.rm = T)/60,
+            arrived_hour_other = sum(ARRIVED_MIN[BLOCK_OTHER_YN == 1], na.rm = T)/60,
+            reg_openings = sum(REG_AVAIL_OPENINGS),
+            reg_openings_new_release = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 | BLOCK_NEW_YN == 1]),
+            reg_openings_release_all = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1]),
+            reg_openings_release = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_YN == 1]),
+            reg_openings_new_normal = sum(REG_AVAIL_OPENINGS[BLOCK_NEW_YN == 1 & BLOCK_RELEASE_ALL_YN == 0 & BLOCK_OTHER_YN == 0]),
+            reg_openings_new_combination = sum(REG_AVAIL_OPENINGS[BLOCK_NEW_YN == 1 & (BLOCK_RELEASE_ALL_YN == 1 | BLOCK_OTHER_YN == 1)]),
+            reg_openings_release_normal = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 & BLOCK_NEW_YN == 0 & BLOCK_OTHER_YN == 0]),
+            reg_openings_release_combination = sum(REG_AVAIL_OPENINGS[BLOCK_RELEASE_ALL_YN == 1 & (BLOCK_NEW_YN == 1 | BLOCK_OTHER_YN == 1)])) %>%
+  collect()
+
+
+future_block_distribution <- past_block_distribution %>%
+  mutate(perc_reg_openings_new_release = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ reg_openings_new_release/reg_openings),
+         perc_release_all = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release_all/reg_openings_new_release),
+         perc_release = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release/reg_openings_new_release)) %>%
+  # mutate(prov_util = case_when(avail_hour == 0 | is.na(avail_hour) ~ 0, TRUE ~ arrived_hour/avail_hour),
+  #        prov_util_new = case_when(avail_hour_new == 0 | is.na(avail_hour_new) ~ 0, TRUE ~ arrived_hour_new/avail_hour_new),
+  #        prov_util_release = case_when(avail_hour_release == 0 | is.na(avail_hour_release) ~ 0, TRUE ~ arrived_hour_release/avail_hour_release),
+  #        prov_util_other = case_when(avail_hour_other == 0 | is.na(avail_hour_other) ~ 0, TRUE ~ arrived_hour_other/avail_hour_other)) %>%
+  # filter(prov_util >=0.35 & prov_util <=2.0) %>%
+  mutate(slot_year_month = as.character(paste0(slot_year, "-", ifelse(nchar(slot_month)==1,paste0("0",slot_month), slot_month))),
+           slot_month = as.numeric(slot_month))  %>%
+  relocate(slot_year_month, .after = slot_month)
 
 
 # Individual/Combination Blocks next 90 Days ------------------------------------
@@ -778,14 +825,456 @@ ________________________________________________________________________________
 <br/>
 <br/>
 
-## Block Distribution (Physicians Only)
+## Upcoming Block Distribution (Physicians Only)
+```{r Upcoming Block Usage (Physicians), echo = FALSE, warning = FALSE, message = FALSE}
+# Table Output -----------------------------------------------------------------
+htmltools::browsable(
+  tagList(
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download Table"),
+      onclick = "Reactable.downloadDataCSV('future-block-distribution-physician', 'Upcoming Template Block Distribution')"
+    ),
+
+# htmltools::browsable(
+#   tagList(
+#     div(tags$label("Group by", `for` = "block-distribution-physician")),
+#     tags$select(
+#       id = "block-distribution-physician",
+#       onchange = "Reactable.setGroupBy('block-distribution-physician', this.value ? [this.value] : [])",
+#       tags$option("None", value = c("SITE","slot_year_month")),
+#       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")),
+#       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#       lapply(c("Site", "Year-Month"), tags$option)
+#     ),
+    
+reactable(
+  future_block_distribution %>%
+    arrange(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month) %>%
+    filter(PROV_TYPE == "Physician"),
+  elementId = "future-block-distribution-physician",
+  # elementId = "cars-grouping-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left",
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+
+  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_TYPE"),
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_NM_WID", "PROV_TYPE", "ACTIVE_STATUS", "slot_year_month"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Total Openings"),
+             columns = c("reg_openings", "reg_openings_new_release", "perc_reg_openings_new_release"),
+             headerStyle = list(background = "#212070", color = "white", fontSize = "15px")),
+    colGroup(name = paste0("Non-Late-Releasing New Openings"),
+             columns = c("reg_openings_new_normal", "reg_openings_new_combination"),
+             headerStyle = list(background = "#00aeef", color = "white", fontSize = "15px")),
+    colGroup(name = paste0("Late-Releasing New Openings"),
+             columns = c("reg_openings_release_normal", "reg_openings_release_combination", "perc_release_all", "perc_release"),
+             headerStyle = list(background = "#d80b8c", color = "white", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    SITE = colDef(
+      name = "Site",
+      minWidth = 150),
+    
+    DEPT_SPECIALTY_NAME = colDef(
+      name = "Specialty",
+      minWidth = 180),
+    
+    DEPARTMENT_NAME = colDef(
+      name = "Department",
+      minWidth = 180),
+    
+    PROV_TYPE = colDef(
+      name = "Provider Type",
+      minWidth = 100),
+    
+    PROV_NM_WID = colDef(
+      name = "Provider",
+      minWidth = 150),
+    
+    ACTIVE_STATUS = colDef(
+      name = "Provider Status",
+      minWidth = 80),
+    
+    slot_year_month = colDef(
+      name = "Year-Month",
+      minWidth = 80),
+    
+    reg_openings = colDef(
+      name = "All Blocks",
+      aggregate = 'sum',
+      minWidth = 80,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px")),
+
+    reg_openings_new_release = colDef(
+      name = "New* Blocks",
+      aggregate = 'sum',
+      minWidth = 80,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    perc_reg_openings_new_release = colDef(
+      name = "% New* Blocks",
+      maxWidth = 100,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalreg_openings = 0
+        let totalreg_openings_new_release = 0
+        rows.forEach(function(row) {
+          totalreg_openings += row['reg_openings']
+          totalreg_openings_new_release += row['reg_openings_new_release']
+        })
+        return (totalreg_openings_new_release) / (totalreg_openings) || '-'
+      }"),
+      format = colFormat(percent = TRUE, digits = 1)
+    ),
+    
+    reg_openings_new_normal = colDef(
+      name = "Individual Non-Late-Releasing",
+      aggregate = 'sum',
+      minWidth = 80,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px")),
+
+    reg_openings_new_combination = colDef(
+      name = "Combination Non-Late-Releasing",
+      aggregate = 'sum',
+      minWidth = 80,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    reg_openings_release_normal = colDef(
+      name = "Individual Late-Releasing",
+      aggregate = 'sum',
+      minWidth = 80,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px")),
+
+    reg_openings_release_combination = colDef(
+      name = "Combination Late-Releasing",
+      aggregate = 'sum',
+      minWidth = 80,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    perc_release_all = colDef(
+      name = "% All Late-Releasing of New Openings",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalreg_openings_release_all = 0
+        let totalreg_openings_new_release = 0
+        rows.forEach(function(row) {
+          totalreg_openings_release_all += row['reg_openings_release_all']
+          totalreg_openings_new_release += row['reg_openings_new_release']
+        })
+        return (totalreg_openings_release_all) / (totalreg_openings_new_release) || '-'
+      }"),
+      format = colFormat(percent = TRUE, digits = 1)
+    ),
+
+    perc_release = colDef(
+      name = "% 7/14-Day Late-Releasing of New Openings",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalreg_openings_release = 0
+        let totalreg_openings_new_release = 0
+        rows.forEach(function(row) {
+          totalreg_openings_release += row['reg_openings_release']
+          totalreg_openings_new_release += row['reg_openings_new_release']
+        })
+        return (totalreg_openings_release) / (totalreg_openings_new_release) || '-'
+      }"),
+      format = colFormat(percent = TRUE, digits = 1)
+    ),
+
+    PROV_ID = colDef(show =F),
+    DEPARTMENT_ID = colDef(show =F),
+    slot_year = colDef(show =F),
+    slot_month = colDef(show =F),
+    avail_hour = colDef(show =F),
+    sched_hour = colDef(show =F),
+    arrived_hour = colDef(show =F),
+    avail_hour_new = colDef(show =F),
+    sched_hour_new = colDef(show =F),
+    arrived_hour_new = colDef(show =F),
+    avail_hour_release = colDef(show =F),
+    sched_hour_release = colDef(show =F),
+    arrived_hour_release = colDef(show =F),
+    avail_hour_other = colDef(show =F),
+    sched_hour_other = colDef(show =F),
+    arrived_hour_other = colDef(show =F),
+    reg_openings_release_all = colDef(show =F),
+    reg_openings_release = colDef(show =F)
+  ) # Close Columns
+  ) # Close Reactable
+ )
+)
+
+```
+<br/>
+<p style="font-size:10pt; font-style:italic">*New openings include both non-time-releasing and time-releasing new block openings.<p/>
+<br/>
+
+
+## Upcoming Block Distribution (All Providers)
+```{r Upcoming Block Usage (All), echo = FALSE, warning = FALSE, message = FALSE}
+# Table Output -----------------------------------------------------------------
+htmltools::browsable(
+  tagList(
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download Table"),
+      onclick = "Reactable.downloadDataCSV('future-block-distribution', 'Upcoming Template Block Distribution')"
+    ),
+
+# htmltools::browsable(
+#   tagList(
+#     div(tags$label("Group by", `for` = "block-distribution-physician")),
+#     tags$select(
+#       id = "block-distribution-physician",
+#       onchange = "Reactable.setGroupBy('block-distribution-physician', this.value ? [this.value] : [])",
+#       tags$option("None", value = c("SITE","slot_year_month")),
+#       # tags$option("Test", value = c("Appt.Source.New","Campus.Specialty.Group")),
+#       # lapply(c("Campus", "Campus.Specialty.Group", "Appt.Source.New"), tags$option)
+#       lapply(c("Site", "Year-Month"), tags$option)
+#     ),
+    
+reactable(
+  future_block_distribution %>%
+    arrange(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month),
+    # filter(PROV_TYPE == "Physician"),
+  elementId = "future-block-distribution",
+  # elementId = "cars-grouping-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left",
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+
+  groupBy = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_TYPE"),
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("MSHS", "SITE", "DEPT_SPECIALTY_NAME", "DEPARTMENT_NAME", "PROV_NM_WID", "PROV_TYPE", "ACTIVE_STATUS", "slot_year_month"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Total Openings"),
+             columns = c("reg_openings", "reg_openings_new_release", "perc_reg_openings_new_release"),
+             headerStyle = list(background = "#212070", color = "white", fontSize = "15px")),
+    colGroup(name = paste0("Non-Late-Releasing New Openings"),
+             columns = c("reg_openings_new_normal", "reg_openings_new_combination"),
+             headerStyle = list(background = "#00aeef", color = "white", fontSize = "15px")),
+    colGroup(name = paste0("Late-Releasing New Openings"),
+             columns = c("reg_openings_release_normal", "reg_openings_release_combination", "perc_release_all", "perc_release"),
+             headerStyle = list(background = "#d80b8c", color = "white", fontSize = "15px")),
+  colGroup(name = paste0("Provider Utilization**"),
+             columns = c("prov_util", "prov_util_new", "prov_util_release", "prov_util_other"),
+           headerStyle = list(background = "#7f7f7f", color = "white", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    SITE = colDef(
+      name = "Site",
+      minWidth = 150),
+    
+    DEPT_SPECIALTY_NAME = colDef(
+      name = "Specialty",
+      minWidth = 180),
+    
+    DEPARTMENT_NAME = colDef(
+      name = "Department",
+      minWidth = 180),
+    
+    PROV_TYPE = colDef(
+      name = "Provider Type",
+      minWidth = 100),
+    
+    PROV_NM_WID = colDef(
+      name = "Provider",
+      minWidth = 150),
+    
+    ACTIVE_STATUS = colDef(
+      name = "Provider Status",
+      minWidth = 80),
+    
+    slot_year_month = colDef(
+      name = "Year-Month",
+      minWidth = 80),
+    
+    reg_openings = colDef(
+      name = "All Blocks",
+      aggregate = 'sum',
+      minWidth = 80,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px")),
+
+    reg_openings_new_release = colDef(
+      name = "New* Blocks",
+      aggregate = 'sum',
+      minWidth = 80,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    perc_reg_openings_new_release = colDef(
+      name = "% New* Blocks",
+      maxWidth = 100,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalreg_openings = 0
+        let totalreg_openings_new_release = 0
+        rows.forEach(function(row) {
+          totalreg_openings += row['reg_openings']
+          totalreg_openings_new_release += row['reg_openings_new_release']
+        })
+        return (totalreg_openings_new_release) / (totalreg_openings) || '-'
+      }"),
+      format = colFormat(percent = TRUE, digits = 1)
+    ),
+    
+    reg_openings_new_normal = colDef(
+      name = "Individual Non-Late-Releasing",
+      aggregate = 'sum',
+      minWidth = 80,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px")),
+
+    reg_openings_new_combination = colDef(
+      name = "Combination Non-Late-Releasing",
+      aggregate = 'sum',
+      minWidth = 80,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    reg_openings_release_normal = colDef(
+      name = "Individual Late-Releasing",
+      aggregate = 'sum',
+      minWidth = 80,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px")),
+
+    reg_openings_release_combination = colDef(
+      name = "Combination Late-Releasing",
+      aggregate = 'sum',
+      minWidth = 80,
+      format = colFormat(separators = TRUE),
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px")),
+    
+    perc_release_all = colDef(
+      name = "% All Late-Releasing of New Openings",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalreg_openings_release_all = 0
+        let totalreg_openings_new_release = 0
+        rows.forEach(function(row) {
+          totalreg_openings_release_all += row['reg_openings_release_all']
+          totalreg_openings_new_release += row['reg_openings_new_release']
+        })
+        return (totalreg_openings_release_all) / (totalreg_openings_new_release) || '-'
+      }"),
+      format = colFormat(percent = TRUE, digits = 1)
+    ),
+
+    perc_release = colDef(
+      name = "% 7/14-Day Late-Releasing of New Openings",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalreg_openings_release = 0
+        let totalreg_openings_new_release = 0
+        rows.forEach(function(row) {
+          totalreg_openings_release += row['reg_openings_release']
+          totalreg_openings_new_release += row['reg_openings_new_release']
+        })
+        return (totalreg_openings_release) / (totalreg_openings_new_release) || '-'
+      }"),
+      format = colFormat(percent = TRUE, digits = 1)
+    ),
+    
+    
+    prov_util = colDef(
+      name = "All Blocks",
+      maxWidth = 100,
+      headerStyle = list(background = "#7f7f7f", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalavail_hour = 0
+        let totalarrived_hour = 0
+        rows.forEach(function(row) {
+          totalavail_hour += row['avail_hour']
+          totalarrived_hour += row['arrived_hour']
+        })
+        return (totalarrived_hour) / (totalavail_hour) || '-'
+      }"),
+      format = colFormat(percent = TRUE, digits = 1)
+    ),
+
+    PROV_ID = colDef(show =F),
+    DEPARTMENT_ID = colDef(show =F),
+    slot_year = colDef(show =F),
+    slot_month = colDef(show =F),
+    avail_hour = colDef(show =F),
+    sched_hour = colDef(show =F),
+    arrived_hour = colDef(show =F),
+    avail_hour_new = colDef(show =F),
+    sched_hour_new = colDef(show =F),
+    arrived_hour_new = colDef(show =F),
+    avail_hour_release = colDef(show =F),
+    sched_hour_release = colDef(show =F),
+    arrived_hour_release = colDef(show =F),
+    avail_hour_other = colDef(show =F),
+    sched_hour_other = colDef(show =F),
+    arrived_hour_other = colDef(show =F),
+    reg_openings_release_all = colDef(show =F),
+    reg_openings_release = colDef(show =F)
+  ) # Close Columns
+  ) # Close Reactable
+ )
+)
+
+
+```
+<br/>
+<p style="font-size:10pt; font-style:italic">*New openings include both non-time-releasing and time-releasing new block openings.<p/>
+<br/>
+
+
+## Past Block Distribution (Physicians Only)
 ```{r Block Usage (Physicians), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
   tagList(
     tags$button(
       tagList(fontawesome::fa("download"), "Download Table"),
-      onclick = "Reactable.downloadDataCSV('block-distribution-physician', 'Template Block Distribution')"
+      onclick = "Reactable.downloadDataCSV('past-block-distribution-physician', 'Past Template Block Distribution')"
     ),
 
 # htmltools::browsable(
@@ -801,10 +1290,10 @@ htmltools::browsable(
 #     ),
     
 reactable(
-  block_distribution %>%
+  past_block_distribution %>%
     arrange(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month) %>%
     filter(PROV_TYPE == "Physician"),
-  elementId = "block-distribution-physician",
+  elementId = "past-block-distribution-physician",
   # elementId = "cars-grouping-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
@@ -1061,14 +1550,14 @@ reactable(
 <br/>
 
 
-## Block Distribution (All Providers)
-```{r Block Usage (All), echo = FALSE, warning = FALSE, message = FALSE}
+## Past Block Distribution (All Providers)
+```{r Block Usage (Physicians), echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
   tagList(
     tags$button(
       tagList(fontawesome::fa("download"), "Download Table"),
-      onclick = "Reactable.downloadDataCSV('block-distribution', 'Template Block Distribution')"
+      onclick = "Reactable.downloadDataCSV('past-block-distribution', 'Past Template Block Distribution')"
     ),
 
 # htmltools::browsable(
@@ -1084,10 +1573,10 @@ htmltools::browsable(
 #     ),
     
 reactable(
-  block_distribution %>%
+  past_block_distribution %>%
     arrange(SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_NAME, PROV_TYPE, PROV_NM_WID, slot_year, slot_month),
     # filter(PROV_TYPE == "Physician"),
-  elementId = "block-distribution",
+  elementId = "past-block-distribution",
   # elementId = "cars-grouping-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
@@ -1337,13 +1826,11 @@ reactable(
  )
 )
 
-
 ```
 <br/>
 <p style="font-size:10pt; font-style:italic">*New openings include both non-time-releasing and time-releasing new block openings.<p/>
 <p style="font-size:10pt; font-style:italic">**Provider utilization for combination blocks are double counted.<p/>
 <br/>
-
 
 ## Combination Blocks (Physicians Only)
 *Includes slots from `r date_start` to `r date_start_next30`*<br/>
