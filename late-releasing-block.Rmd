@@ -1551,7 +1551,7 @@ reactable(
 
 
 ## Past Block Distribution (All Providers)
-```{r Past Block Usage (Physicians), echo = FALSE, warning = FALSE, message = FALSE}
+```{r Past Block Usage, echo = FALSE, warning = FALSE, message = FALSE}
 # Table Output -----------------------------------------------------------------
 htmltools::browsable(
   tagList(
