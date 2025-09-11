@@ -933,6 +933,7 @@ reactable(
       name = "% New* Blocks",
       maxWidth = 100,
       headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(background = "#c7c6ef", fontWeight = "Bold"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
       aggregate = JS("function(values, rows) {
         let totalreg_openings = 0
@@ -978,6 +979,7 @@ reactable(
       name = "% All Late-Releasing of New Openings",
       maxWidth = 100,
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(background = "#fcc9e9", fontWeight = "Bold"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
       aggregate = JS("function(values, rows) {
         let totalreg_openings_release_all = 0
@@ -995,6 +997,7 @@ reactable(
       name = "% 7/14-Day Late-Releasing of New Openings",
       maxWidth = 100,
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(background = "#fcc9e9", fontWeight = "Bold"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
       aggregate = JS("function(values, rows) {
         let totalreg_openings_release = 0
@@ -1146,6 +1149,7 @@ reactable(
       name = "% New* Blocks",
       maxWidth = 100,
       headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(background = "#c7c6ef", fontWeight = "Bold"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
       aggregate = JS("function(values, rows) {
         let totalreg_openings = 0
@@ -1191,6 +1195,7 @@ reactable(
       name = "% All Late-Releasing of New Openings",
       maxWidth = 100,
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(background = "#fcc9e9", fontWeight = "Bold"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
       aggregate = JS("function(values, rows) {
         let totalreg_openings_release_all = 0
@@ -1208,6 +1213,7 @@ reactable(
       name = "% 7/14-Day Late-Releasing of New Openings",
       maxWidth = 100,
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(background = "#fcc9e9", fontWeight = "Bold"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
       aggregate = JS("function(values, rows) {
         let totalreg_openings_release = 0
@@ -1360,6 +1366,7 @@ reactable(
       name = "% New* Blocks",
       maxWidth = 100,
       headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(background = "#c7c6ef", fontWeight = "Bold"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
       aggregate = JS("function(values, rows) {
         let totalreg_openings = 0
@@ -1405,6 +1412,7 @@ reactable(
       name = "% All Late-Releasing of New Openings",
       maxWidth = 100,
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(background = "#fcc9e9", fontWeight = "Bold"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
       aggregate = JS("function(values, rows) {
         let totalreg_openings_release_all = 0
@@ -1422,6 +1430,7 @@ reactable(
       name = "% 7/14-Day Late-Releasing of New Openings",
       maxWidth = 100,
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(background = "#fcc9e9", fontWeight = "Bold"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
       aggregate = JS("function(values, rows) {
         let totalreg_openings_release = 0
@@ -1643,6 +1652,7 @@ reactable(
       name = "% New* Blocks",
       maxWidth = 100,
       headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(background = "#c7c6ef", fontWeight = "Bold"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
       aggregate = JS("function(values, rows) {
         let totalreg_openings = 0
@@ -1688,6 +1698,7 @@ reactable(
       name = "% All Late-Releasing of New Openings",
       maxWidth = 100,
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(background = "#fcc9e9", fontWeight = "Bold"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
       aggregate = JS("function(values, rows) {
         let totalreg_openings_release_all = 0
@@ -1705,6 +1716,7 @@ reactable(
       name = "% 7/14-Day Late-Releasing of New Openings",
       maxWidth = 100,
       headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      style = list(background = "#fcc9e9", fontWeight = "Bold"),
       # Calculate the aggregate conversion rate as `(total-pending) / total`
       aggregate = JS("function(values, rows) {
         let totalreg_openings_release = 0
