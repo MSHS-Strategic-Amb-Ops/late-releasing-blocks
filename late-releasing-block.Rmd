@@ -546,10 +546,7 @@ org_block_type <- block_raw_tbl_loc %>%
          BLOCK_OTHER_YN = case_when(BLOCK_OTHER_NUM>0 ~ 1, TRUE ~ 0)) 
 
 
-check <- slot_data_prc_tbl %>%
-  group_by(year(SLOT_BEGIN_TIME), month(SLOT_BEGIN_TIME), DEPARTMENT_ID, PROV_ID, PROV_NM_WID) %>%
-  summarise(total = n()) %>%
-  collect()
+
 
 block_distribution <- slot_data_prc_tbl %>%
   # filter(PROV_ID == "1325296") %>%
@@ -589,6 +586,7 @@ block_distribution <- slot_data_prc_tbl %>%
   mutate(MSHS = "MSHS") 
 
 
+
 future_block_distribution <- block_distribution %>%
   # filter(year(SLOT_BEGIN_TIME) == current_year) %>%
   filter(SLOT_BEGIN_TIME >= TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
@@ -617,7 +615,7 @@ future_block_distribution <- block_distribution %>%
   collect()
 
 
-future_block_distribution <- past_block_distribution %>%
+future_block_distribution <- future_block_distribution %>%
   mutate(perc_reg_openings_new_release = case_when(reg_openings == 0 | is.na(reg_openings) ~ 0, TRUE ~ reg_openings_new_release/reg_openings),
          perc_release_all = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release_all/reg_openings_new_release),
          perc_release = case_when(reg_openings_new_release == 0 | is.na(reg_openings_new_release) ~ 0, TRUE ~ reg_openings_release/reg_openings_new_release)) %>%
