@@ -590,7 +590,7 @@ block_distribution <- slot_data_prc_tbl %>%
 
 
 future_block_distribution <- block_distribution %>%
-  filter(SLOT_BEGIN_TIME >= TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
+  filter(SLOT_BEGIN_TIME > TO_DATE(date_start, "YYYY-MM-DD HH24:MI:SS")) %>%
   group_by(MSHS, SITE, DEPT_SPECIALTY_NAME, DEPARTMENT_ID, DEPARTMENT_NAME, PROV_ID, PROV_NM_WID, PROV_TYPE, ACTIVE_STATUS,
            slot_year, slot_month) %>%
   summarise(avail_hour = sum(REG_AVAIL_MIN, na.rm = T)/60,
